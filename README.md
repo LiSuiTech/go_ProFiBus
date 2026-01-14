@@ -510,3 +510,93 @@ A: 当前版本支持自定义模型格式，未来将支持 ONNX、TensorFlow L
 ---
 
 **如果这个项目对你有帮助，请给个 ⭐ Star！**
+
+## 🤖 人在环中的机器学习（HITL ML）
+
+### 异常检测与事件管理系统
+
+项目实现了完整的人在环中的机器学习系统，用于工业物联网场景的异常检测和事件管理。
+
+#### 核心功能
+
+1. **异常检测** - 基于规则和模式的多层检测
+   - 阈值规则、范围规则、变化率规则
+   - 统计规则（基于标准差）
+   - 多种相似度算法（DTW、余弦、欧氏等）
+
+2. **事件管理** - 完整的事件生命周期管理
+   - 事件检测和记录
+   - 上下文数据提取
+   - 事件分类和统计
+
+3. **人工标注** - 规范的标注工作流
+   - 标注员管理
+   - 标注任务队列
+   - 权限控制
+
+4. **事件库** - 智能事件存储
+   - 文件持久化（JSONL格式）
+   - 相似事件搜索
+   - 多维度查询
+
+5. **模型优化** - 自动化模型训练
+   - 从事件库自动准备训练数据
+   - 训练/验证集分割
+   - 早停机制
+
+6. **持续学习** - 良性循环机制
+   - 自动检测训练时机
+   - 自动更新模型
+   - 持续提升准确率
+
+#### 工作流程
+
+```
+数据采集 → 异常检测 → 生成事件
+     ↓
+人工标注 → 确认/拒绝
+     ↓
+事件库存储 ← 相似度匹配
+     ↓
+模型训练 → 模型更新
+     ↓
+检测优化 ← 持续循环
+```
+
+#### 快速开始
+
+```go
+// 1. 创建规则引擎
+ruleEngine := anomaly.NewRuleEngine()
+rule := anomaly.NewThresholdRule("temp_high", "温度过高", "temperature", ">", 80.0, anomaly.SeverityWarning)
+ruleEngine.AddRule(rule)
+
+// 2. 创建事件检测器
+detector := event.NewEventDetector(ruleEngine, patternMatcher, 0.7, 5*time.Second)
+
+// 3. 检测异常
+events, _ := detector.Detect(sample)
+
+// 4. 人工标注
+workflow := event.NewAnnotationWorkflow(eventManager, eventStore)
+workflow.AnnotateEvent(eventID, annotatorID, true, "确认异常", labels)
+
+// 5. 模型训练
+optimizer := event.NewModelOptimizer(eventStore, inferenceEngine, config)
+result, _ := optimizer.TrainModel("anomaly_classifier", dataset)
+
+// 6. 持续学习
+learningLoop := event.NewContinuousLearningLoop(optimizer, "anomaly_classifier", 24*time.Hour)
+learningLoop.Start()
+```
+
+#### 示例程序
+
+```bash
+# 运行人在环中ML示例
+cd examples/hitl_ml
+go run main.go
+```
+
+详细文档请参考：[HITL_ML.md](docs/HITL_ML.md)
+
