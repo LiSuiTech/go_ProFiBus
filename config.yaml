@@ -1,0 +1,78 @@
+system:
+  name: "go_ProFiBus"
+  version: "1.0.0"
+  environment: "dev"
+  debug: true
+
+logging:
+  level: "INFO"
+  enable_file: true
+  file_path: "logs/profibus.log"
+  max_size_mb: 100
+
+protocols:
+  - id: "rs485_main"
+    type: "RS485"
+    port: "/dev/ttyUSB0"
+    baud_rate: 115200
+    data_bits: 8
+    stop_bits: 1
+    parity: "none"
+    enabled: true
+    metadata:
+      location: "主控制器"
+      description: "主RS485总线"
+
+  - id: "i2c_sensor"
+    type: "I2C"
+    port: "/dev/i2c-1"
+    i2c_address: 0x48
+    enabled: true
+    metadata:
+      location: "传感器模块"
+      description: "温度传感器"
+
+  - id: "spi_display"
+    type: "SPI"
+    port: "/dev/spidev0.0"
+    enabled: false
+    metadata:
+      location: "显示模块"
+      description: "LCD显示屏"
+
+collector:
+  buffer_size: 1000
+  default_sample_rate: "100ms"
+  enable_cache: true
+  cache_size: 100
+  retry_count: 3
+  retry_delay: "100ms"
+
+fusion:
+  strategy: "weighted"  # average, weighted, kalman, moving_average, exponential_sma
+  time_window: "1s"
+  default_weights:
+    rs485_main: 0.6
+    i2c_sensor: 0.4
+
+inference:
+  models:
+    - name: "anomaly_detector"
+      type: "neural_network"
+      model_path: "models/anomaly_detector.bin"
+      input_shape: [-1, 10]
+      enabled: false
+
+    - name: "fault_predictor"
+      type: "linear_regression"
+      model_path: "models/fault_predictor.bin"
+      input_shape: [-1, 5]
+      enabled: false
+
+multimodal:
+  alignment: "linear_interp"  # nearest_neighbor, linear_interp, dtw, cross_correlation
+  analyze_interval: "1s"
+  enabled_modalities:
+    - "time_series"
+    - "sensor"
+    - "event"

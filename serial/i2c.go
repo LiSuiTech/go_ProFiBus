@@ -56,7 +56,7 @@ func (i *I2C) Write(data []byte) (int, error) {
 	if err != nil {
 		return n, fmt.Errorf("写入数据失败：%s", err)
 	}
-	return 0, nil
+	return n, nil
 }
 
 func (i *I2C) Read(buffer []byte) (int, error) {
@@ -71,7 +71,7 @@ func (i *I2C) Read(buffer []byte) (int, error) {
 		return n, fmt.Errorf("读取数据失败：%s", err)
 	}
 
-	return 0, nil
+	return n, nil
 }
 
 func (i *I2C) Close() error {
