@@ -506,3 +506,69 @@ func (re *RuleEngine) DisableRule(ruleID string) error {
 	rule.SetEnabled(false)
 	return nil
 }
+
+// EvaluateConcurrent 并发评估规则（性能优化版本）
+// 使用goroutine并发评估多条规则，适合规则数量较多的场景
+func (re *RuleEngine) EvaluateConcurrent(sample *collector.DataSample) []*EvaluationResult {
+	re.mu.RLock()
+	enabledRules := make([]Rule, 0, len(re.rules))
+	for _, rule := range re.rules {
+		if rule.IsEnabled() {
+			enabledRules = append(enabledRules, rule)
+		}
+	}
+	re.mu.RUnlock()
+
+	if len(enabledRules) == 0 {
+		return nil
+	}
+
+	// 创建结果通道
+	resultChan := make(chan *EvaluationResult, len(enabledRules))
+	var wg sync.WaitGroup
+
+	// 并发评估每条规则
+	for _, rule := range enabledRules {
+		wg.Add(1)
+		go func(r Rule) {
+			defer wg.Done()
+
+			violated, score, message := r.Evaluate(sample)
+
+			re.stats.mu.Lock()
+			re.stats.TotalEvaluations++
+			if violated {
+				re.stats.TotalViolations++
+			}
+			re.stats.mu.Unlock()
+
+			if violated {
+				result := &EvaluationResult{
+					RuleID:      r.GetID(),
+					RuleName:    r.GetName(),
+					Severity:    r.GetSeverity(),
+					Violated:    true,
+					Score:       score,
+					Message:     message,
+					Sample:      sample,
+					EvaluatedAt: time.Now(),
+				}
+				resultChan <- result
+			}
+		}(rule)
+	}
+
+	// 等待所有评估完成
+	go func() {
+		wg.Wait()
+		close(resultChan)
+	}()
+
+	// 收集结果
+	results := make([]*EvaluationResult, 0)
+	for result := range resultChan {
+		results = append(results, result)
+	}
+
+	return results
+}
