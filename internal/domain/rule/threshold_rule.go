@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/LiSuiTech/go_ProFiBus/pkg/interfaces"
+	"go_ProFiBus/pkg/interfaces"
 )
 
 // ThresholdRule 阈值规则

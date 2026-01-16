@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/LiSuiTech/go_ProFiBus/pkg/interfaces"
+	"go_ProFiBus/pkg/interfaces"
 )
 
 // Rule 规则实体

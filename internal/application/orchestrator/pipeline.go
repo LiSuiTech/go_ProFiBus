@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/LiSuiTech/go_ProFiBus/pkg/interfaces"
+	"go_ProFiBus/pkg/interfaces"
 )
 
 // Pipeline 数据处理管道

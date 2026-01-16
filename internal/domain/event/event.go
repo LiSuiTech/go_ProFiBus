@@ -3,7 +3,7 @@ package event
 import (
 	"time"
 
-	"github.com/LiSuiTech/go_ProFiBus/pkg/interfaces"
+	"go_ProFiBus/pkg/interfaces"
 	"github.com/google/uuid"
 )
 

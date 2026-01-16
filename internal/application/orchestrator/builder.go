@@ -3,7 +3,7 @@ package orchestrator
 import (
 	"fmt"
 
-	"github.com/LiSuiTech/go_ProFiBus/pkg/interfaces"
+	"go_ProFiBus/pkg/interfaces"
 )
 
 // PipelineBuilder Pipeline 构建器
