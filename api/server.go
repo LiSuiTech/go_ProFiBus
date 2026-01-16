@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"go_ProFiBus/api/handlers"
 	"go_ProFiBus/api/middleware"
+	websocket "go_ProFiBus/internal/interfaces/websocket"
 	"go_ProFiBus/logger"
+	"go_ProFiBus/pkg/interfaces"
 	"go_ProFiBus/storage"
 	"net/http"
 	"time"
@@ -43,13 +45,15 @@ type Server struct {
 	router     *gin.Engine
 	httpServer *http.Server
 	store      *storage.PostgresStore
+	wsHub      *websocket.Hub
+	tracer     interfaces.Tracer
 	log        *logger.Logger
 	ctx        context.Context
 	cancel     context.CancelFunc
 }
 
 // NewServer 创建新的API服务器
-func NewServer(config *ServerConfig, store *storage.PostgresStore) (*Server, error) {
+func NewServer(config *ServerConfig, store *storage.PostgresStore, tracer interfaces.Tracer) (*Server, error) {
 	if config == nil {
 		config = DefaultServerConfig()
 	}
@@ -79,12 +83,17 @@ func NewServer(config *ServerConfig, store *storage.PostgresStore) (*Server, err
 		}
 	}
 
+	// 创建WebSocket Hub
+	wsHub := websocket.NewHub()
+
 	ctx, cancel := context.WithCancel(context.Background())
 
 	server := &Server{
 		config: config,
 		router: router,
 		store:  store,
+		wsHub:  wsHub,
+		tracer: tracer,
 		log:    logger.GetLogger(),
 		ctx:    ctx,
 		cancel: cancel,
@@ -101,6 +110,14 @@ func (s *Server) registerRoutes() {
 	// 健康检查端点
 	s.router.GET("/health", s.handleHealth)
 	s.router.GET("/ping", s.handlePing)
+
+	// WebSocket端点
+	if s.wsHub != nil {
+		wsHandler := websocket.NewHandler(s.wsHub)
+		s.router.GET("/ws/trace", func(c *gin.Context) {
+			wsHandler.ServeWS(c.Writer, c.Request)
+		})
+	}
 
 	// 创建handlers
 	sensorHandler := handlers.NewSensorHandler(s.store)
@@ -182,6 +199,18 @@ func (s *Server) Start() error {
 		WriteTimeout: s.config.WriteTimeout,
 	}
 
+	// 启动WebSocket Hub
+	if s.wsHub != nil {
+		go s.wsHub.Run()
+		s.log.Info("WebSocket Hub已启动")
+	}
+
+	// 连接Tracer到WebSocket Hub
+	if s.tracer != nil && s.wsHub != nil {
+		go s.bridgeTracerToWebSocket()
+		s.log.Info("Tracer已连接到WebSocket Hub")
+	}
+
 	s.log.Info("启动REST API服务器 地址=%s", addr)
 
 	// 在goroutine中启动服务器
@@ -192,6 +221,26 @@ func (s *Server) Start() error {
 	}()
 
 	return nil
+}
+
+// bridgeTracerToWebSocket 桥接Tracer事件到WebSocket
+func (s *Server) bridgeTracerToWebSocket() {
+	// 订阅tracer事件
+	eventCh := s.tracer.Subscribe()
+
+	for {
+		select {
+		case <-s.ctx.Done():
+			s.tracer.Unsubscribe(eventCh)
+			return
+		case event, ok := <-eventCh:
+			if !ok {
+				return
+			}
+			// 广播事件到所有WebSocket客户端
+			s.wsHub.BroadcastEvent(event)
+		}
+	}
 }
 
 // Stop 停止API服务器
