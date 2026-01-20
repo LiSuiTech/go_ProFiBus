@@ -222,22 +222,72 @@ func (p *Pipeline) GetStatus() PipelineStatus {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
 
+	status := "stopped"
+	if p.running {
+		status = "running"
+	}
+
 	return PipelineStatus{
-		Name:             p.name,
-		Running:          p.running,
-		SourceStatus:     p.source.GetStatus(),
-		ProcessorCount:   len(p.processors),
-		AnalyzerCount:    len(p.analyzers),
-		SinkCount:        len(p.sinks),
+		Name:              p.name,
+		Running:           p.running,
+		Status:            status,
+		SourceStatus:      p.source.GetStatus(),
+		ProcessorCount:    len(p.processors),
+		AnalyzerCount:     len(p.analyzers),
+		SinkCount:         len(p.sinks),
+		SamplesProcessed:  0, // TODO: 实现样本计数
+		Errors:            0, // TODO: 实现错误计数
+		LastSampleTime:    "", // TODO: 实现最后样本时间
 	}
 }
 
 // PipelineStatus 管道状态
 type PipelineStatus struct {
-	Name             string
-	Running          bool
-	SourceStatus     interfaces.SourceStatus
-	ProcessorCount   int
-	AnalyzerCount    int
-	SinkCount        int
+	Name              string
+	Running           bool
+	Status            string
+	SourceStatus      interfaces.SourceStatus
+	ProcessorCount    int
+	AnalyzerCount     int
+	SinkCount         int
+	SamplesProcessed  int64
+	Errors            int64
+	LastSampleTime    string
+}
+
+// GetSource 获取数据源
+func (p *Pipeline) GetSource() interfaces.DataSource {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+	return p.source
+}
+
+// GetProcessors 获取处理器列表
+func (p *Pipeline) GetProcessors() []interfaces.Processor {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+	// 返回副本以防止外部修改
+	processors := make([]interfaces.Processor, len(p.processors))
+	copy(processors, p.processors)
+	return processors
+}
+
+// GetAnalyzers 获取分析器列表
+func (p *Pipeline) GetAnalyzers() []interfaces.Analyzer {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+	// 返回副本以防止外部修改
+	analyzers := make([]interfaces.Analyzer, len(p.analyzers))
+	copy(analyzers, p.analyzers)
+	return analyzers
+}
+
+// GetSinks 获取输出列表
+func (p *Pipeline) GetSinks() []interfaces.DataSink {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+	// 返回副本以防止外部修改
+	sinks := make([]interfaces.DataSink, len(p.sinks))
+	copy(sinks, p.sinks)
+	return sinks
 }

@@ -139,8 +139,40 @@ func (o *Orchestrator) GetAllPipelines() map[string]*Pipeline {
 	return pipelines
 }
 
+// OrchestratorStatus 编排器整体状态
+type OrchestratorStatus struct {
+	Pipelines    map[string]PipelineStatus
+	TotalCount   int
+	RunningCount int
+	StoppedCount int
+}
+
 // GetStatus 获取所有管道状态
-func (o *Orchestrator) GetStatus() []PipelineStatus {
+func (o *Orchestrator) GetStatus() OrchestratorStatus {
+	o.mu.RLock()
+	defer o.mu.RUnlock()
+
+	status := OrchestratorStatus{
+		Pipelines:  make(map[string]PipelineStatus),
+		TotalCount: len(o.pipelines),
+	}
+
+	for name, pipeline := range o.pipelines {
+		pStatus := pipeline.GetStatus()
+		status.Pipelines[name] = pStatus
+
+		if pStatus.Running {
+			status.RunningCount++
+		} else {
+			status.StoppedCount++
+		}
+	}
+
+	return status
+}
+
+// GetAllStatuses 获取所有管道状态（数组形式）
+func (o *Orchestrator) GetAllStatuses() []PipelineStatus {
 	o.mu.RLock()
 	defer o.mu.RUnlock()
 
