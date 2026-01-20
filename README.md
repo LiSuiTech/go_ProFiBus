@@ -1,6 +1,20 @@
 # go_ProFiBus
 
-`go_ProFiBus` 是一个功能强大的 Go 语言工业通信库，专为物联网和工业自动化场景设计。它不仅支持多种串口协议通信，还集成了数据采集、多数据融合、模型推理和多模态数据分析等高级功能。
+`go_ProFiBus` 是一个基于 DDD（领域驱动设计）和整洁架构的工业现场总线数据采集、处理和分析系统，专为物联网和工业自动化场景设计。
+
+**当前版本**: Phase 1 重构完成，Phase 2 进行中
+
+## 🏗️ 架构亮点
+
+- ✅ **DDD 分层架构** - 清晰的领域层、应用层、基础设施层分离
+- ✅ **接口驱动** - 面向接口编程，易于扩展和测试
+- ✅ **管道模式** - 灵活的数据处理管道（Source → Processors → Analyzers → Sinks）
+- ✅ **实时追踪** - 数据流可视化和性能监控（Phase 2）
+- ✅ **插件系统** - 支持动态加载算法和处理器
+
+**详细架构文档**: [ARCHITECTURE.md](./ARCHITECTURE.md)
+**Phase 1 总结**: [PHASE1_SUMMARY.md](./PHASE1_SUMMARY.md)
+**Phase 2 计划**: [PHASE2_PLAN.md](./PHASE2_PLAN.md)
 
 ## ✨ 核心特性
 
@@ -78,232 +92,272 @@ go mod tidy
 
 ## 🚀 快速开始
 
-### 基础使用
+### 使用管道处理数据（推荐方式）
 
 ```go
 package main
 
 import (
-    "fmt"
-    "go_ProFiBus/application"
-    "log"
-)
-
-func main() {
-    portName := "/dev/ttyUSB0" // 根据实际情况修改
-
-    // 创建 UART 总线
-    uartBus, err := application.NewProtocolBus(application.UART, portName)
-    if err != nil {
-        log.Fatalf("错误: %v", err)
-    }
-    defer uartBus.Close()
-
-    // 写入数据
-    dataToSend := []byte("Hello UART")
-    if n, err := uartBus.Write(dataToSend); err != nil {
-        log.Fatalf("写入错误: %v", err)
-    } else {
-        fmt.Printf("写入 %d 字节\n", n)
-    }
-
-    // 读取数据
-    buffer := make([]byte, 100)
-    n, err := uartBus.Read(buffer)
-    if err != nil {
-        log.Fatalf("读取错误: %v", err)
-    }
-    fmt.Printf("接收到数据: %s\n", buffer[:n])
-}
-```
-
-### 数据采集示例
-
-```go
-package main
-
-import (
+    "context"
     "go_ProFiBus/collector"
-    "go_ProFiBus/serial"
-    "log"
-    "time"
-)
-
-func main() {
-    // 打开串口
-    port := &serial.UART{}
-    port.Open("/dev/ttyUSB0")
-
-    // 配置采集器
-    config := &collector.CollectorConfig{
-        SourceID:   "sensor_1",
-        Port:       port,
-        SampleRate: 100 * time.Millisecond,
-        BufferSize: 1000,
-        Handler: func(sample *collector.DataSample) error {
-            log.Printf("收到数据: %v", sample)
-            return nil
-        },
-    }
-
-    // 创建并启动采集器
-    c := collector.NewCollector(config)
-    c.Start()
-    defer c.Stop()
-
-    // 运行一段时间
-    time.Sleep(10 * time.Second)
-
-    // 查看统计信息
-    stats := c.GetStats()
-    log.Printf("总样本数: %d, 成功: %d, 失败: %d",
-        stats.TotalSamples, stats.SuccessSamples, stats.FailedSamples)
-}
-```
-
-### 数据融合示例
-
-```go
-package main
-
-import (
-    "go_ProFiBus/collector"
-    "go_ProFiBus/fusion"
-    "log"
-    "time"
-)
-
-func main() {
-    // 创建融合器
-    fusionEngine := fusion.NewDataFusion(fusion.StrategyWeighted, 1*time.Second)
-
-    // 添加数据源
-    sample1 := &collector.DataSample{
-        SourceID: "sensor_1",
-        ParsedData: map[string]interface{}{
-            "temperature": 25.5,
-        },
-        Quality: 0.95,
-    }
-
-    sample2 := &collector.DataSample{
-        SourceID: "sensor_2",
-        ParsedData: map[string]interface{}{
-            "temperature": 25.8,
-        },
-        Quality: 0.90,
-    }
-
-    fusionEngine.AddDataSource(sample1, 0.6)
-    fusionEngine.AddDataSource(sample2, 0.4)
-
-    // 执行融合
-    result, err := fusionEngine.Fuse()
-    if err != nil {
-        log.Fatalf("融合失败: %v", err)
-    }
-
-    log.Printf("融合结果: %+v", result.Data)
-    log.Printf("置信度: %.2f", result.Confidence)
-}
-```
-
-### 模型推理示例
-
-```go
-package main
-
-import (
-    "go_ProFiBus/inference"
+    "go_ProFiBus/internal/application/orchestrator"
+    infracollector "go_ProFiBus/internal/infrastructure/collector"
+    infraanalyzer "go_ProFiBus/internal/infrastructure/analyzer"
+    "go_ProFiBus/anomaly"
     "log"
 )
 
 func main() {
-    // 创建推理引擎
-    engine := inference.NewInferenceEngine()
+    ctx := context.Background()
 
-    // 创建并注册模型
-    model := inference.NewLinearRegressionModel()
-    model.SetWeights([]float64{0.5, 0.3, 0.2}, 1.0)
-    engine.RegisterModel("predictor", model)
-
-    // 准备输入数据
-    input, _ := inference.NewTensor([]int{1, 3}, []float64{25.0, 101.3, 0.6})
-
-    // 执行推理
-    output, err := engine.Predict("predictor", input)
-    if err != nil {
-        log.Fatalf("推理失败: %v", err)
-    }
-
-    log.Printf("预测结果: %v", output.Data)
-}
-```
-
-### 多模态分析示例
-
-```go
-package main
-
-import (
-    "go_ProFiBus/multimodal"
-    "log"
-    "time"
-)
-
-func main() {
-    // 创建分析器
-    analyzer := multimodal.NewMultiModalAnalyzer(multimodal.AlignmentLinearInterp)
-
-    // 注册特征提取器
-    analyzer.RegisterFeatureExtractor(
-        multimodal.ModalitySensor,
-        multimodal.NewSensorFeatureExtractor(),
+    // 1. 创建数据源（使用适配器包装现有 Collector）
+    collectorInstance := collector.NewCollector(config)
+    dataSource := infracollector.NewDataSourceAdapter(
+        "sensor-001",
+        "温度传感器",
+        collectorInstance,
     )
 
-    // 添加模态数据
-    sensorData := &multimodal.ModalityData{
-        Type:       multimodal.ModalitySensor,
-        Timestamp:  time.Now(),
-        SourceID:   "sensor_1",
-        Embedding:  []float64{0.1, 0.2, 0.3},
-        Confidence: 0.95,
-    }
+    // 2. 创建分析器（异常检测）
+    ruleEngine := anomaly.NewRuleEngine()
+    tempRule := anomaly.NewThresholdRule(
+        "temp_high",
+        "温度过高",
+        "temperature",
+        ">",
+        80.0,
+        anomaly.SeverityWarning,
+    )
+    ruleEngine.AddRule(tempRule)
+    analyzer := infraanalyzer.NewRuleEngineAnalyzer("rule-engine", ruleEngine)
 
-    analyzer.AddModalityData(sensorData)
+    // 3. 创建输出（可选：添加数据库存储等）
+    sink := NewConsoleSink() // 自定义实现
 
-    // 执行分析
-    result, err := analyzer.Analyze(time.Now(), "")
+    // 4. 构建管道
+    pipeline, err := orchestrator.NewPipelineBuilder("main-pipeline").
+        WithSource(dataSource).
+        WithAnalyzer(analyzer).
+        WithSink(sink).
+        Build()
+
     if err != nil {
-        log.Fatalf("分析失败: %v", err)
+        log.Fatalf("构建管道失败: %v", err)
     }
 
-    log.Printf("分析结果: 模态数=%d, 置信度=%.2f",
-        result.ModalityCount, result.Confidence)
+    // 5. 启动管道
+    if err := pipeline.Start(ctx); err != nil {
+        log.Fatalf("启动管道失败: %v", err)
+    }
+    defer pipeline.Stop()
+
+    log.Println("管道运行中...")
+    select {} // 保持运行
 }
 ```
+
+### 实现自定义处理器
+
+```go
+package main
+
+import (
+    "context"
+    "go_ProFiBus/pkg/interfaces"
+)
+
+// 自定义温度转换处理器
+type TemperatureConverter struct {
+    name string
+}
+
+func NewTemperatureConverter() *TemperatureConverter {
+    return &TemperatureConverter{name: "temp-converter"}
+}
+
+// 实现 Processor 接口
+func (p *TemperatureConverter) Process(ctx context.Context, input interfaces.DataSample) (interfaces.DataSample, error) {
+    data := input.GetData()
+
+    // 将华氏度转换为摄氏度
+    if tempF, ok := data["temperature_f"].(float64); ok {
+        tempC := (tempF - 32) * 5 / 9
+        data["temperature_c"] = tempC
+    }
+
+    return input, nil
+}
+
+func (p *TemperatureConverter) GetName() string {
+    return p.name
+}
+
+func (p *TemperatureConverter) GetConfig() interfaces.ProcessorConfig {
+    return nil
+}
+
+func (p *TemperatureConverter) Initialize(config interfaces.ProcessorConfig) error {
+    return nil
+}
+
+func (p *TemperatureConverter) Close() error {
+    return nil
+}
+
+// 在管道中使用
+func main() {
+    pipeline := orchestrator.NewPipelineBuilder("my-pipeline").
+        WithSource(dataSource).
+        WithProcessor(NewTemperatureConverter()). // 添加自定义处理器
+        WithAnalyzer(analyzer).
+        Build()
+}
+```
+
+### 使用多管道编排器
+
+```go
+package main
+
+import (
+    "context"
+    "go_ProFiBus/internal/application/orchestrator"
+    "log"
+)
+
+func main() {
+    ctx := context.Background()
+
+    // 创建编排器
+    orch := orchestrator.NewOrchestrator()
+
+    // 添加多个管道
+    pipeline1, _ := orchestrator.NewPipelineBuilder("sensor-pipeline-1").
+        WithSource(sensor1Source).
+        WithAnalyzer(analyzer1).
+        Build()
+
+    pipeline2, _ := orchestrator.NewPipelineBuilder("sensor-pipeline-2").
+        WithSource(sensor2Source).
+        WithAnalyzer(analyzer2).
+        Build()
+
+    orch.AddPipeline(pipeline1)
+    orch.AddPipeline(pipeline2)
+
+    // 启动所有管道
+    if err := orch.StartAll(ctx); err != nil {
+        log.Fatalf("启动失败: %v", err)
+    }
+    defer orch.StopAll()
+
+    // 监控错误
+    go func() {
+        for err := range orch.MonitorErrors() {
+            log.Printf("管道错误: %v", err)
+        }
+    }()
+
+    // 查看状态
+    status := orch.GetStatus()
+    log.Printf("运行中的管道: %d", status.RunningCount)
+}
+```
+
+### 数据持久化到 TimescaleDB
+
+```go
+package main
+
+import (
+    "context"
+    "go_ProFiBus/storage"
+    infraStorage "go_ProFiBus/internal/infrastructure/storage"
+    "go_ProFiBus/pkg/interfaces"
+    "log"
+)
+
+func main() {
+    ctx := context.Background()
+
+    // 创建 PostgreSQL 连接
+    pgStore, err := storage.NewPostgresStore(
+        "localhost", 5432, "profibus_db", "user", "password",
+    )
+    if err != nil {
+        log.Fatalf("连接数据库失败: %v", err)
+    }
+    defer pgStore.Close()
+
+    // 创建时序数据仓储
+    repo := infraStorage.NewTimeSeriesRepository(pgStore)
+
+    // 批量写入数据（高性能）
+    samples := []interfaces.DataSample{
+        dataSample1,
+        dataSample2,
+        dataSample3,
+    }
+
+    if err := repo.WriteSamples(ctx, samples); err != nil {
+        log.Fatalf("写入失败: %v", err)
+    }
+
+    // 查询时间范围数据
+    results, _ := repo.QueryByTimeRange(
+        ctx,
+        "sensor-001",
+        startTime,
+        endTime,
+    )
+
+    log.Printf("查询到 %d 条记录", len(results))
+}
+```
+
 
 ## 📁 项目结构
 
 ```
 go_ProFiBus/
-├── application/        # 应用层 - 协议工厂
-├── datalink/          # 数据链路层 - 帧处理和CRC校验
-├── serial/            # 串口层 - 具体协议实现
-├── collector/         # 数据采集层 - 多源数据采集
-├── fusion/            # 数据融合层 - 多数据融合算法
-├── inference/         # 推理层 - 模型推理引擎
-├── multimodal/        # 多模态层 - 跨模态数据分析
-├── logger/            # 日志系统
-├── errors/            # 错误处理
-├── config/            # 配置管理
-├── examples/          # 示例程序
-│   ├── basic/        # 基础示例
-│   └── advanced/     # 高级示例
-├── config.yaml        # 配置文件
-├── go.mod            # 依赖管理
-└── README.md         # 项目文档
+├── pkg/interfaces/              # 公共接口层（推荐使用）
+│   ├── datasource.go            # 数据源抽象
+│   ├── processor.go             # 处理器抽象
+│   ├── analyzer.go              # 分析器抽象
+│   ├── repository.go            # 仓储抽象
+│   ├── plugin.go                # 插件系统
+│   └── tracer.go                # 追踪器
+│
+├── internal/                    # 内部实现（新架构）
+│   ├── domain/                  # 领域层 - 业务实体
+│   ├── application/             # 应用层 - 业务逻辑编排
+│   │   └── orchestrator/        # 管道编排器 ⭐
+│   ├── infrastructure/          # 基础设施层 - 适配器
+│   └── interfaces/              # 外部接口 - WebSocket等
+│
+├── [Legacy - 兼容旧代码]         # ⚠️ 已弃用，仅用于向后兼容
+│   ├── collector/               # → 使用 pkg/interfaces
+│   ├── anomaly/                 # → 使用 internal/domain/rule
+│   ├── event/                   # → 使用 internal/domain/event
+│   ├── fusion/                  # → 使用 orchestrator
+│   └── inference/               # → 使用 plugin 系统
+│
+├── [基础设施和工具]
+│   ├── serial/                  # 串口协议实现
+│   ├── logger/                  # 日志系统
+│   ├── errors/                  # 错误处理
+│   ├── config/                  # 配置管理
+│   ├── storage/                 # 数据存储
+│   ├── api/                     # REST API
+│   └── examples/                # 使用示例
+│
+├── ARCHITECTURE.md              # 架构文档 ⭐
+├── PHASE1_SUMMARY.md            # Phase 1 总结
+├── PHASE2_PLAN.md               # Phase 2 计划
+└── README.md                    # 项目文档
 ```
+
+**⚠️ 重要提示**: 根目录下的 `collector/`, `anomaly/`, `event/`, `fusion/`, `inference/` 等包已被标记为 **Deprecated**。新代码请使用 `internal/` 和 `pkg/interfaces/` 下的新架构。详见 [ARCHITECTURE.md](./ARCHITECTURE.md)。
 
 ## ⚙️ 配置文件
 
@@ -358,18 +412,25 @@ go test -cover ./...
 
 ## 📚 示例程序
 
-### 基础示例
+### Pipeline 示例（推荐）
 
 ```bash
-cd examples/basic
+cd examples/pipeline
 go run main.go
 ```
 
-### 高级示例
+### 并发采集示例
 
 ```bash
-cd examples/advanced
+cd examples/concurrent_collection
 go run main.go
+```
+
+### WebSocket 追踪示例（Phase 2）
+
+```bash
+cd examples/rest_api
+go run websocket_trace_example.go
 ```
 
 ## 🔧 配置选项
@@ -412,34 +473,60 @@ log.EnableFileLog("app.log")
 
 ## 🏗️ 架构设计
 
-### 分层架构
+### DDD 分层架构
 
 ```
 ┌─────────────────────────────────────────┐
-│         Application Layer               │  应用层
-│  (Protocol Factory, High-level APIs)    │
+│      Interface Layer (pkg/interfaces)   │  接口定义层
+│    (DataSource, Processor, Analyzer)    │
 ├─────────────────────────────────────────┤
-│       Advanced Features Layer           │  高级功能层
-│  (Multimodal, Inference, Fusion)        │
+│      Application Layer (internal/app)   │  应用层
+│    (Pipeline, Orchestrator, Builder)    │  业务逻辑编排
 ├─────────────────────────────────────────┤
-│        Data Collection Layer            │  数据采集层
-│  (Multi-source Collector)               │
+│      Domain Layer (internal/domain)     │  领域层
+│    (DataSample, Event, Rule)            │  业务实体
 ├─────────────────────────────────────────┤
-│         Data Link Layer                 │  数据链路层
-│  (Frame, CRC Check)                     │
+│  Infrastructure Layer (internal/infra)  │  基础设施层
+│  (Adapters, Repository, WebSocket)      │  技术实现
 ├─────────────────────────────────────────┤
-│         Serial Protocol Layer           │  串口协议层
-│  (UART, RS485, I2C, SPI, etc.)         │
+│      [Legacy Packages - Deprecated]     │  旧代码（向后兼容）
+│    (collector, anomaly, event, etc.)    │
 └─────────────────────────────────────────┘
+```
+
+### 数据流管道
+
+```
+Serial Port
+    ↓
+DataSource (Adapter)
+    ↓
+Pipeline [
+    Processor 1 (数据转换)
+    →
+    Processor 2 (数据过滤)
+    →
+    Analyzer (异常检测)
+    →
+    Sink (存储)
+]
+    ↓
+TimescaleDB / Event Store
+    ↓
+WebSocket (实时推送)
+    ↓
+Vue 3 Dashboard
 ```
 
 ### 核心组件
 
-1. **Serial Protocols** - 统一的串口通信接口
-2. **Data Collector** - 多源并发数据采集
-3. **Data Fusion** - 多传感器数据融合
-4. **Inference Engine** - 机器学习模型推理
-5. **Multimodal Analyzer** - 多模态数据分析
+1. **Pipeline** - 数据处理管道编排器 ⭐
+2. **Orchestrator** - 多管道管理器
+3. **Adapters** - 新旧代码桥接适配器
+4. **Repository** - 数据仓储抽象
+5. **Tracer** - 数据流追踪和可视化（Phase 2）
+
+详细架构说明请参考：[ARCHITECTURE.md](./ARCHITECTURE.md)
 
 ## 🤝 贡献指南
 
@@ -468,16 +555,31 @@ log.EnableFileLog("app.log")
 
 ## 🗺️ 路线图
 
-- [x] 基础串口协议支持
-- [x] 数据采集功能
-- [x] 数据融合算法
-- [x] 模型推理引擎
-- [x] 多模态数据分析
-- [ ] WebSocket 实时数据推送
-- [ ] RESTful API 接口
-- [ ] 图形化配置界面
-- [ ] 更多机器学习模型支持
-- [ ] 分布式部署支持
+### Phase 1: 核心架构重构 ✅ 已完成
+- [x] DDD 分层架构设计
+- [x] 接口抽象层（pkg/interfaces）
+- [x] Pipeline 数据处理框架
+- [x] 适配器模式桥接新旧代码
+- [x] TimescaleDB 时序数据存储
+
+### Phase 2: 数据流可视化 🚧 进行中
+- [x] Tracer 接口和实现
+- [x] WebSocket 实时推送
+- [x] 追踪数据库设计
+- [ ] Vue 3 可视化 Dashboard
+- [ ] 拓扑图和性能指标展示
+
+### Phase 3: 算法配置系统 📋 计划中
+- [ ] 基于 ConfigSchema 的表单生成
+- [ ] 拖拽式工作流编辑器
+- [ ] Plugin Registry 动态加载
+- [ ] 算法市场
+
+### Phase 4: 容器化部署 📋 计划中
+- [ ] Docker 多阶段构建
+- [ ] docker-compose 编排
+- [ ] Kubernetes 部署配置
+- [ ] CI/CD 流水线
 
 ## 📊 性能指标
 
@@ -495,108 +597,29 @@ log.EnableFileLog("app.log")
 
 ## 🔍 常见问题
 
-**Q: 如何在没有硬件的情况下测试？**
-A: 可以使用虚拟串口工具如 `socat` 创建虚拟设备进行测试。
+**Q: 新旧架构如何选择？**
+A: 新代码必须使用 `pkg/interfaces` 和 `internal/` 下的新架构。旧包（collector, anomaly, event等）已标记为 Deprecated，仅用于向后兼容。
 
-**Q: 支持 Windows 系统吗？**
-A: 主要针对 Linux 系统开发，Windows 系统部分功能可能需要适配。
+**Q: 如何添加自定义数据源？**
+A: 实现 `pkg/interfaces.DataSource` 接口，然后通过 PipelineBuilder 集成到管道中。参考 `internal/infrastructure/collector/datasource_adapter.go`。
 
-**Q: 如何添加自定义协议？**
-A: 实现 `serial.SerialPort` 接口，并在 `application` 层注册即可。
+**Q: 如何添加自定义处理器？**
+A: 实现 `pkg/interfaces.Processor` 接口，无需修改核心代码即可使用。
 
-**Q: 模型文件格式是什么？**
-A: 当前版本支持自定义模型格式，未来将支持 ONNX、TensorFlow Lite 等标准格式。
+**Q: 为什么要重构架构？**
+A: 旧架构存在紧耦合、难以测试、扩展困难等问题。新架构基于 DDD 和整洁架构，更易维护和扩展。详见 [ARCHITECTURE.md](./ARCHITECTURE.md)。
+
+**Q: Phase 2 的可视化功能何时完成？**
+A: 后端追踪功能已完成，Vue 3 Dashboard 正在开发中。预计 Phase 2 整体完成时间约 22 小时工作量。
 
 ---
 
 **如果这个项目对你有帮助，请给个 ⭐ Star！**
 
-## 🤖 人在环中的机器学习（HITL ML）
+## 📖 更多文档
 
-### 异常检测与事件管理系统
-
-项目实现了完整的人在环中的机器学习系统，用于工业物联网场景的异常检测和事件管理。
-
-#### 核心功能
-
-1. **异常检测** - 基于规则和模式的多层检测
-   - 阈值规则、范围规则、变化率规则
-   - 统计规则（基于标准差）
-   - 多种相似度算法（DTW、余弦、欧氏等）
-
-2. **事件管理** - 完整的事件生命周期管理
-   - 事件检测和记录
-   - 上下文数据提取
-   - 事件分类和统计
-
-3. **人工标注** - 规范的标注工作流
-   - 标注员管理
-   - 标注任务队列
-   - 权限控制
-
-4. **事件库** - 智能事件存储
-   - 文件持久化（JSONL格式）
-   - 相似事件搜索
-   - 多维度查询
-
-5. **模型优化** - 自动化模型训练
-   - 从事件库自动准备训练数据
-   - 训练/验证集分割
-   - 早停机制
-
-6. **持续学习** - 良性循环机制
-   - 自动检测训练时机
-   - 自动更新模型
-   - 持续提升准确率
-
-#### 工作流程
-
-```
-数据采集 → 异常检测 → 生成事件
-     ↓
-人工标注 → 确认/拒绝
-     ↓
-事件库存储 ← 相似度匹配
-     ↓
-模型训练 → 模型更新
-     ↓
-检测优化 ← 持续循环
-```
-
-#### 快速开始
-
-```go
-// 1. 创建规则引擎
-ruleEngine := anomaly.NewRuleEngine()
-rule := anomaly.NewThresholdRule("temp_high", "温度过高", "temperature", ">", 80.0, anomaly.SeverityWarning)
-ruleEngine.AddRule(rule)
-
-// 2. 创建事件检测器
-detector := event.NewEventDetector(ruleEngine, patternMatcher, 0.7, 5*time.Second)
-
-// 3. 检测异常
-events, _ := detector.Detect(sample)
-
-// 4. 人工标注
-workflow := event.NewAnnotationWorkflow(eventManager, eventStore)
-workflow.AnnotateEvent(eventID, annotatorID, true, "确认异常", labels)
-
-// 5. 模型训练
-optimizer := event.NewModelOptimizer(eventStore, inferenceEngine, config)
-result, _ := optimizer.TrainModel("anomaly_classifier", dataset)
-
-// 6. 持续学习
-learningLoop := event.NewContinuousLearningLoop(optimizer, "anomaly_classifier", 24*time.Hour)
-learningLoop.Start()
-```
-
-#### 示例程序
-
-```bash
-# 运行人在环中ML示例
-cd examples/hitl_ml
-go run main.go
-```
-
-详细文档请参考：[HITL_ML.md](docs/HITL_ML.md)
+- **[架构文档](./ARCHITECTURE.md)** - 详细的架构设计和迁移指南 ⭐
+- **[Phase 1 总结](./PHASE1_SUMMARY.md)** - Phase 1 重构成果和技术细节
+- **[Phase 2 计划](./PHASE2_PLAN.md)** - Phase 2 数据流可视化实施计划
+- **[数据库设计](./docs/DATABASE.md)** - TimescaleDB 时序数据库设计
 

@@ -1,3 +1,10 @@
+// Package anomaly provides legacy anomaly detection functionality.
+//
+// Deprecated: This package is part of the legacy architecture.
+// New code should use:
+//   - pkg/interfaces/analyzer.go for interface definitions
+//   - internal/domain/rule for domain entities
+//   - internal/infrastructure/analyzer for implementations
 package anomaly
 
 import (

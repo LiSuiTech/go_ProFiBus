@@ -1,3 +1,10 @@
+// Package collector provides legacy data collection functionality.
+//
+// Deprecated: This package is part of the legacy architecture.
+// New code should use:
+//   - pkg/interfaces/datasource.go for data source interfaces
+//   - internal/domain/datasample for data sample entities
+//   - internal/infrastructure/collector for adapter implementations
 package collector
 
 import (
