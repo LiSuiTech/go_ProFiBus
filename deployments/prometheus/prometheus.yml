@@ -1,0 +1,106 @@
+# Prometheus Configuration for go_ProFiBus
+
+global:
+  scrape_interval: 15s
+  scrape_timeout: 10s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: 'profibus'
+    environment: 'production'
+
+# Alertmanager configuration
+alerting:
+  alertmanagers:
+  - static_configs:
+    - targets:
+      # - alertmanager:9093
+
+# Load rules once and periodically evaluate them
+rule_files:
+  # - "rules/*.yml"
+
+# Scrape configurations
+scrape_configs:
+  # Prometheus itself
+  - job_name: 'prometheus'
+    static_configs:
+    - targets: ['localhost:9090']
+
+  # go_ProFiBus application
+  - job_name: 'profibus'
+    metrics_path: '/metrics'
+    static_configs:
+    - targets: ['profibus:8081']
+      labels:
+        app: 'profibus'
+        env: 'production'
+
+  # Kubernetes service discovery (if using in k8s)
+  - job_name: 'kubernetes-pods'
+    kubernetes_sd_configs:
+    - role: pod
+      namespaces:
+        names:
+        - profibus
+    relabel_configs:
+    # Only scrape pods with annotation prometheus.io/scrape=true
+    - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+      action: keep
+      regex: true
+    # Use the port from annotation prometheus.io/port
+    - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_port]
+      action: replace
+      target_label: __address__
+      regex: ([^:]+)(?::\d+)?
+      replacement: $1:$2
+    # Use path from annotation prometheus.io/path or default to /metrics
+    - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+      action: replace
+      target_label: __metrics_path__
+      regex: (.+)
+    # Add pod metadata as labels
+    - source_labels: [__meta_kubernetes_namespace]
+      action: replace
+      target_label: kubernetes_namespace
+    - source_labels: [__meta_kubernetes_pod_name]
+      action: replace
+      target_label: kubernetes_pod_name
+    - source_labels: [__meta_kubernetes_pod_label_app]
+      action: replace
+      target_label: app
+    - source_labels: [__meta_kubernetes_pod_label_version]
+      action: replace
+      target_label: version
+
+  # PostgreSQL exporter (if deployed)
+  - job_name: 'postgres'
+    static_configs:
+    - targets: ['postgres-exporter:9187']
+      labels:
+        app: 'postgres'
+
+  # Redis exporter (if deployed)
+  - job_name: 'redis'
+    static_configs:
+    - targets: ['redis-exporter:9121']
+      labels:
+        app: 'redis'
+
+  # Node exporter (system metrics)
+  - job_name: 'node'
+    static_configs:
+    - targets: ['node-exporter:9100']
+
+# Remote write configuration (optional - for long-term storage)
+# remote_write:
+#   - url: "http://prometheus-remote-storage:9201/write"
+#     queue_config:
+#       capacity: 10000
+#       max_samples_per_send: 5000
+#       batch_send_deadline: 5s
+#       max_shards: 10
+#       min_shards: 1
+
+# Remote read configuration (optional)
+# remote_read:
+#   - url: "http://prometheus-remote-storage:9201/read"
