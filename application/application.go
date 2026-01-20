@@ -14,6 +14,10 @@ const (
 	USB
 	OneWire
 	Modbus
+	RS232
+	RS485
+	I2C
+	SPI
 )
 
 // NewProtocolBus 创建一个新的协议总线实例
@@ -31,6 +35,14 @@ func NewProtocolBus(protocol ProtocolType, portName string) (serial.SerialPort, 
 		port = &serial.OneWire{}
 	case Modbus:
 		port = &serial.Modbus{}
+	case RS232:
+		port = &serial.RS232{}
+	case RS485:
+		port = serial.NewRS485()
+	case I2C:
+		port = serial.NewI2C()
+	case SPI:
+		port = serial.NewSpiDevice()
 	default:
 		return nil, fmt.Errorf("不支持的协议类型")
 	}

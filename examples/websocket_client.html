@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSocket 追踪事件查看器</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        h1 {
+            color: #333;
+        }
+        .controls {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .controls button {
+            padding: 10px 20px;
+            margin-right: 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .btn-connect {
+            background-color: #4CAF50;
+            color: white;
+        }
+        .btn-disconnect {
+            background-color: #f44336;
+            color: white;
+        }
+        .btn-clear {
+            background-color: #2196F3;
+            color: white;
+        }
+        .status {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            margin-left: 10px;
+            font-weight: bold;
+        }
+        .status.connected {
+            background-color: #4CAF50;
+            color: white;
+        }
+        .status.disconnected {
+            background-color: #f44336;
+            color: white;
+        }
+        .filters {
+            margin-top: 15px;
+            padding: 15px;
+            background-color: #f9f9f9;
+            border-radius: 4px;
+        }
+        .filters label {
+            margin-right: 10px;
+        }
+        .filters input {
+            padding: 5px;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+            margin-right: 15px;
+        }
+        .events-container {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            max-height: 600px;
+            overflow-y: auto;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .event {
+            padding: 15px;
+            margin-bottom: 10px;
+            border-left: 4px solid #2196F3;
+            background-color: #f9f9f9;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .event.error {
+            border-left-color: #f44336;
+            background-color: #ffebee;
+        }
+        .event.success {
+            border-left-color: #4CAF50;
+        }
+        .event-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+        .event-body {
+            color: #555;
+        }
+        .event-meta {
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px solid #ddd;
+            font-size: 11px;
+            color: #888;
+        }
+        .stats {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        .stat-card {
+            flex: 1;
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 32px;
+            font-weight: bold;
+            color: #2196F3;
+        }
+        .stat-label {
+            font-size: 14px;
+            color: #666;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔄 WebSocket 追踪事件查看器</h1>
+
+    <div class="stats">
+        <div class="stat-card">
+            <div class="stat-value" id="totalEvents">0</div>
+            <div class="stat-label">总事件数</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value" id="eventsPerSec">0</div>
+            <div class="stat-label">事件/秒</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value" id="uniqueSamples">0</div>
+            <div class="stat-label">唯一样本</div>
+        </div>
+    </div>
+
+    <div class="controls">
+        <button class="btn-connect" onclick="connect()">连接</button>
+        <button class="btn-disconnect" onclick="disconnect()">断开</button>
+        <button class="btn-clear" onclick="clearEvents()">清空</button>
+        <span class="status disconnected" id="status">未连接</span>
+
+        <div class="filters">
+            <label>过滤器:</label>
+            <input type="text" id="pipelineFilter" placeholder="Pipeline ID" />
+            <input type="text" id="componentFilter" placeholder="Component ID" />
+            <input type="text" id="sampleFilter" placeholder="Sample ID" />
+            <button onclick="applyFilter()">应用过滤器</button>
+        </div>
+    </div>
+
+    <div class="events-container" id="eventsContainer">
+        <!-- 事件将在这里动态显示 -->
+    </div>
+
+    <script>
+        let ws = null;
+        let totalEvents = 0;
+        let eventsThisSecond = 0;
+        let uniqueSamples = new Set();
+        let lastSecond = Math.floor(Date.now() / 1000);
+
+        function connect() {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                console.log('Already connected');
+                return;
+            }
+
+            const wsUrl = 'ws://localhost:8080/ws/trace';
+            ws = new WebSocket(wsUrl);
+
+            ws.onopen = function() {
+                console.log('WebSocket connected');
+                document.getElementById('status').textContent = '已连接';
+                document.getElementById('status').className = 'status connected';
+            };
+
+            ws.onmessage = function(event) {
+                const traceEvent = JSON.parse(event.data);
+                displayEvent(traceEvent);
+                updateStats(traceEvent);
+            };
+
+            ws.onerror = function(error) {
+                console.error('WebSocket error:', error);
+            };
+
+            ws.onclose = function() {
+                console.log('WebSocket disconnected');
+                document.getElementById('status').textContent = '未连接';
+                document.getElementById('status').className = 'status disconnected';
+            };
+        }
+
+        function disconnect() {
+            if (ws) {
+                ws.close();
+                ws = null;
+            }
+        }
+
+        function clearEvents() {
+            document.getElementById('eventsContainer').innerHTML = '';
+            totalEvents = 0;
+            eventsThisSecond = 0;
+            uniqueSamples.clear();
+            updateStatsDisplay();
+        }
+
+        function displayEvent(event) {
+            const container = document.getElementById('eventsContainer');
+            const eventDiv = document.createElement('div');
+            eventDiv.className = 'event ' + (event.status === 'error' ? 'error' : 'success');
+
+            const timestamp = new Date(event.timestamp).toLocaleTimeString('zh-CN', {
+                hour12: false,
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                fractionalSecondDigits: 3
+            });
+
+            eventDiv.innerHTML = `
+                <div class="event-header">
+                    <span>${event.component_name} (${event.component_type})</span>
+                    <span>${timestamp}</span>
+                </div>
+                <div class="event-body">
+                    <strong>Action:</strong> ${event.action} |
+                    <strong>Status:</strong> ${event.status} |
+                    <strong>Sample:</strong> ${event.sample_id}
+                    ${event.duration_ms ? ` | <strong>Duration:</strong> ${event.duration_ms}ms` : ''}
+                </div>
+                ${event.data_snapshot ? `
+                <div class="event-meta">
+                    <strong>Data:</strong> ${JSON.stringify(event.data_snapshot)}
+                </div>
+                ` : ''}
+                ${event.metadata ? `
+                <div class="event-meta">
+                    <strong>Metadata:</strong> ${JSON.stringify(event.metadata)}
+                </div>
+                ` : ''}
+            `;
+
+            container.insertBefore(eventDiv, container.firstChild);
+
+            // 限制显示的事件数量
+            while (container.children.length > 100) {
+                container.removeChild(container.lastChild);
+            }
+        }
+
+        function updateStats(event) {
+            totalEvents++;
+            eventsThisSecond++;
+            uniqueSamples.add(event.sample_id);
+
+            const currentSecond = Math.floor(Date.now() / 1000);
+            if (currentSecond !== lastSecond) {
+                document.getElementById('eventsPerSec').textContent = eventsThisSecond;
+                eventsThisSecond = 0;
+                lastSecond = currentSecond;
+            }
+
+            updateStatsDisplay();
+        }
+
+        function updateStatsDisplay() {
+            document.getElementById('totalEvents').textContent = totalEvents;
+            document.getElementById('uniqueSamples').textContent = uniqueSamples.size;
+        }
+
+        function applyFilter() {
+            if (!ws || ws.readyState !== WebSocket.OPEN) {
+                alert('请先连接WebSocket');
+                return;
+            }
+
+            const filter = {
+                pipeline_ids: document.getElementById('pipelineFilter').value ?
+                    [document.getElementById('pipelineFilter').value] : [],
+                component_ids: document.getElementById('componentFilter').value ?
+                    [document.getElementById('componentFilter').value] : [],
+                sample_ids: document.getElementById('sampleFilter').value ?
+                    [document.getElementById('sampleFilter').value] : []
+            };
+
+            ws.send(JSON.stringify(filter));
+            console.log('Filter applied:', filter);
+        }
+
+        // 自动连接
+        window.onload = function() {
+            connect();
+        };
+
+        // 页面卸载时断开连接
+        window.onbeforeunload = function() {
+            disconnect();
+        };
+    </script>
+</body>
+</html>
