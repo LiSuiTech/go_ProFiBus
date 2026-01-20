@@ -133,3 +133,176 @@ export interface TracesResponse {
   total: number
   filter: TraceFilter
 }
+
+// ========== Phase 3: Configuration Types ==========
+
+export interface RuleConfig {
+  id: string
+  name: string
+  description: string
+  type: 'threshold' | 'statistical' | 'ml'
+  version: string
+  parameters: Record<string, any>
+  enabled: boolean
+  priority: number
+  created_at: string
+  updated_at: string
+  created_by: string
+  updated_by: string
+}
+
+export interface AnalyzerConfig {
+  id: string
+  name: string
+  description: string
+  type: 'statistical' | 'ml' | 'ensemble'
+  version: string
+  parameters: Record<string, any>
+  rule_ids: string[]
+  enabled: boolean
+  created_at: string
+  updated_at: string
+  created_by: string
+  updated_by: string
+}
+
+export interface ProcessorConfig {
+  id: string
+  name: string
+  description: string
+  type: 'filter' | 'transform' | 'aggregate'
+  version: string
+  parameters: Record<string, any>
+  order: number
+  enabled: boolean
+  created_at: string
+  updated_at: string
+  created_by: string
+  updated_by: string
+}
+
+export interface ConfigTemplate {
+  id: string
+  name: string
+  description: string
+  type: 'rule' | 'analyzer' | 'processor'
+  category: string
+  schema: ConfigSchema
+  defaults: Record<string, any>
+  created_at: string
+  updated_at: string
+}
+
+export interface ConfigSchema {
+  type: string
+  properties: Record<string, SchemaProperty>
+  required: string[]
+  examples?: Record<string, any>[]
+}
+
+export interface SchemaProperty {
+  type: string
+  description: string
+  default?: any
+  minimum?: number
+  maximum?: number
+  enum?: string[]
+  pattern?: string
+}
+
+export interface ConfigHistory {
+  id: string
+  config_id: string
+  config_type: string
+  action: 'created' | 'updated' | 'deleted'
+  changed_by: string
+  changed_at: string
+  old_value: Record<string, any>
+  new_value: Record<string, any>
+  reason: string
+}
+
+// ========== Phase 3: RBAC Types ==========
+
+export interface User {
+  id: string
+  username: string
+  email: string
+  full_name: string
+  role_ids: string[]
+  enabled: boolean
+  created_at: string
+  updated_at: string
+  last_login_at?: string
+}
+
+export interface Role {
+  id: string
+  name: string
+  description: string
+  permissions: string[]
+  created_at: string
+  updated_at: string
+}
+
+export interface LoginRequest {
+  username: string
+  password: string
+}
+
+export interface LoginResponse {
+  token: string
+  user: User
+  expires_at: string
+}
+
+export interface CreateUserRequest {
+  username: string
+  email: string
+  password: string
+  full_name?: string
+  role_ids?: string[]
+}
+
+export interface UpdateUserRequest {
+  email?: string
+  full_name?: string
+  role_ids?: string[]
+  enabled?: boolean
+}
+
+export interface ChangePasswordRequest {
+  old_password: string
+  new_password: string
+}
+
+// API Response Types for Configuration and RBAC
+export interface RulesResponse {
+  rules: RuleConfig[]
+  count: number
+}
+
+export interface AnalyzersResponse {
+  analyzers: AnalyzerConfig[]
+  count: number
+}
+
+export interface ProcessorsResponse {
+  processors: ProcessorConfig[]
+  count: number
+}
+
+export interface TemplatesResponse {
+  templates: ConfigTemplate[]
+  count: number
+}
+
+export interface UsersResponse {
+  users: User[]
+  count: number
+}
+
+export interface RolesResponse {
+  roles: Role[]
+  count: number
+}

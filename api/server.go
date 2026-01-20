@@ -6,10 +6,12 @@ import (
 	"go_ProFiBus/api/handlers"
 	"go_ProFiBus/api/middleware"
 	"go_ProFiBus/internal/application/orchestrator"
+	"go_ProFiBus/internal/domain/config"
+	"go_ProFiBus/internal/infrastructure/storage"
 	websocket "go_ProFiBus/internal/interfaces/websocket"
 	"go_ProFiBus/logger"
 	"go_ProFiBus/pkg/interfaces"
-	"go_ProFiBus/storage"
+	storageOld "go_ProFiBus/storage"
 	"net/http"
 	"time"
 
@@ -42,25 +44,34 @@ func DefaultServerConfig() *ServerConfig {
 
 // Server REST API服务器
 type Server struct {
-	config          *ServerConfig
-	router          *gin.Engine
-	httpServer      *http.Server
-	store           *storage.PostgresStore
-	wsHub           *websocket.Hub
-	tracer          interfaces.Tracer
-	traceRepository interfaces.TraceRepository
-	orchestrator    *orchestrator.Orchestrator
-	log             *logger.Logger
-	ctx             context.Context
-	cancel          context.CancelFunc
+	config           *ServerConfig
+	router           *gin.Engine
+	httpServer       *http.Server
+	store            *storageOld.PostgresStore
+	wsHub            *websocket.Hub
+	tracer           interfaces.Tracer
+	traceRepository  interfaces.TraceRepository
+	configRepository interfaces.ConfigRepository
+	configValidator  *config.Validator
+	userRepository   interfaces.UserRepository
+	authService      interfaces.AuthService
+	authzService     interfaces.AuthorizationService
+	orchestrator     *orchestrator.Orchestrator
+	log              *logger.Logger
+	ctx              context.Context
+	cancel           context.CancelFunc
 }
 
 // NewServer 创建新的API服务器
 func NewServer(
 	config *ServerConfig,
-	store *storage.PostgresStore,
+	store *storageOld.PostgresStore,
 	tracer interfaces.Tracer,
 	traceRepository interfaces.TraceRepository,
+	configRepository interfaces.ConfigRepository,
+	userRepository interfaces.UserRepository,
+	authService interfaces.AuthService,
+	authzService interfaces.AuthorizationService,
 	orch *orchestrator.Orchestrator,
 ) (*Server, error) {
 	if config == nil {
@@ -97,17 +108,25 @@ func NewServer(
 
 	ctx, cancel := context.WithCancel(context.Background())
 
+	// Create config validator
+	configValidator := config.NewValidator()
+
 	server := &Server{
-		config:          config,
-		router:          router,
-		store:           store,
-		wsHub:           wsHub,
-		tracer:          tracer,
-		traceRepository: traceRepository,
-		orchestrator:    orch,
-		log:             logger.GetLogger(),
-		ctx:             ctx,
-		cancel:          cancel,
+		config:           config,
+		router:           router,
+		store:            store,
+		wsHub:            wsHub,
+		tracer:           tracer,
+		traceRepository:  traceRepository,
+		configRepository: configRepository,
+		configValidator:  configValidator,
+		userRepository:   userRepository,
+		authService:      authService,
+		authzService:     authzService,
+		orchestrator:     orch,
+		log:              logger.GetLogger(),
+		ctx:              ctx,
+		cancel:           cancel,
 	}
 
 	// 注册路由
@@ -208,6 +227,259 @@ func (s *Server) registerRoutes() {
 			{
 				metrics.GET("/system", metricsHandler.GetSystemMetrics)
 				metrics.GET("/component", metricsHandler.GetComponentMetrics)
+			}
+		}
+
+		// 认证和用户管理路由 (Phase 3 - RBAC)
+		if s.authService != nil && s.authzService != nil && s.userRepository != nil {
+			authHandler := handlers.NewAuthHandler(s.authService, s.authzService, s.userRepository)
+
+			// 公开的认证端点 (无需认证)
+			auth := v1.Group("/auth")
+			{
+				auth.POST("/login", authHandler.Login)
+			}
+
+			// 需要认证的端点
+			authProtected := v1.Group("/auth")
+			authProtected.Use(middleware.AuthMiddleware(s.authService))
+			{
+				authProtected.POST("/logout", authHandler.Logout)
+				authProtected.POST("/refresh", authHandler.RefreshToken)
+				authProtected.GET("/me", authHandler.GetMe)
+				authProtected.POST("/change-password", authHandler.ChangePassword)
+			}
+
+			// 用户管理端点 (需要 admin 权限)
+			users := v1.Group("/users")
+			users.Use(middleware.AuthMiddleware(s.authService))
+			users.Use(middleware.RequirePermission(s.authzService, interfaces.ResourceUser, interfaces.ActionRead))
+			{
+				users.GET("", authHandler.ListUsers)
+				users.GET("/:id", authHandler.GetUser)
+				users.GET("/:id/roles", authHandler.GetUserRoles)
+
+				// 创建、更新、删除用户需要额外权限
+				usersWrite := users.Group("")
+				usersWrite.Use(middleware.RequirePermission(s.authzService, interfaces.ResourceUser, interfaces.ActionCreate))
+				{
+					usersWrite.POST("", authHandler.CreateUser)
+				}
+
+				usersUpdate := users.Group("")
+				usersUpdate.Use(middleware.RequirePermission(s.authzService, interfaces.ResourceUser, interfaces.ActionUpdate))
+				{
+					usersUpdate.PUT("/:id", authHandler.UpdateUser)
+					usersUpdate.POST("/:id/roles/:role_id", authHandler.AssignRoleToUser)
+					usersUpdate.DELETE("/:id/roles/:role_id", authHandler.RemoveRoleFromUser)
+				}
+
+				usersDelete := users.Group("")
+				usersDelete.Use(middleware.RequirePermission(s.authzService, interfaces.ResourceUser, interfaces.ActionDelete))
+				{
+					usersDelete.DELETE("/:id", authHandler.DeleteUser)
+				}
+			}
+
+			// 角色管理端点 (需要 admin 权限)
+			roles := v1.Group("/roles")
+			roles.Use(middleware.AuthMiddleware(s.authService))
+			{
+				// 读取角色 - 所有认证用户都可以
+				roles.GET("", authHandler.ListRoles)
+				roles.GET("/:id", authHandler.GetRole)
+
+				// 创建、更新、删除角色需要 admin 权限
+				rolesAdmin := roles.Group("")
+				rolesAdmin.Use(middleware.RequireRole(s.authzService, "role-admin"))
+				{
+					rolesAdmin.POST("", authHandler.CreateRole)
+					rolesAdmin.PUT("/:id", authHandler.UpdateRole)
+					rolesAdmin.DELETE("/:id", authHandler.DeleteRole)
+				}
+			}
+		}
+
+		// 配置管理路由 (Phase 3)
+		if s.configRepository != nil && s.configValidator != nil {
+			configHandler := handlers.NewConfigHandler(s.configRepository, s.configValidator)
+
+			configGroup := v1.Group("/config")
+			// 应用认证中间件（如果RBAC启用）
+			if s.authService != nil {
+				configGroup.Use(middleware.AuthMiddleware(s.authService))
+			}
+			{
+				// Rule configuration routes
+				rules := configGroup.Group("/rules")
+				{
+					// 读取规则 - 需要 rule:read 权限
+					rulesRead := rules.Group("")
+					if s.authzService != nil {
+						rulesRead.Use(middleware.RequirePermission(s.authzService, interfaces.ResourceRule, interfaces.ActionRead))
+					}
+					{
+						rulesRead.GET("", configHandler.ListRuleConfigs)
+						rulesRead.GET("/:id", configHandler.GetRuleConfig)
+					}
+
+					// 创建规则 - 需要 rule:create 权限
+					rulesCreate := rules.Group("")
+					if s.authzService != nil {
+						rulesCreate.Use(middleware.RequirePermission(s.authzService, interfaces.ResourceRule, interfaces.ActionCreate))
+					}
+					{
+						rulesCreate.POST("", configHandler.CreateRuleConfig)
+					}
+
+					// 更新规则 - 需要 rule:update 权限
+					rulesUpdate := rules.Group("")
+					if s.authzService != nil {
+						rulesUpdate.Use(middleware.RequirePermission(s.authzService, interfaces.ResourceRule, interfaces.ActionUpdate))
+					}
+					{
+						rulesUpdate.PUT("/:id", configHandler.UpdateRuleConfig)
+					}
+
+					// 删除规则 - 需要 rule:delete 权限
+					rulesDelete := rules.Group("")
+					if s.authzService != nil {
+						rulesDelete.Use(middleware.RequirePermission(s.authzService, interfaces.ResourceRule, interfaces.ActionDelete))
+					}
+					{
+						rulesDelete.DELETE("/:id", configHandler.DeleteRuleConfig)
+					}
+				}
+
+				// Analyzer configuration routes
+				analyzers := configGroup.Group("/analyzers")
+				{
+					// 读取分析器配置
+					analyzersRead := analyzers.Group("")
+					if s.authzService != nil {
+						analyzersRead.Use(middleware.RequirePermission(s.authzService, interfaces.ResourceAnalyzer, interfaces.ActionRead))
+					}
+					{
+						analyzersRead.GET("", configHandler.ListAnalyzerConfigs)
+						analyzersRead.GET("/:id", configHandler.GetAnalyzerConfig)
+					}
+
+					// 创建分析器配置
+					analyzersCreate := analyzers.Group("")
+					if s.authzService != nil {
+						analyzersCreate.Use(middleware.RequirePermission(s.authzService, interfaces.ResourceAnalyzer, interfaces.ActionCreate))
+					}
+					{
+						analyzersCreate.POST("", configHandler.CreateAnalyzerConfig)
+					}
+
+					// 更新分析器配置
+					analyzersUpdate := analyzers.Group("")
+					if s.authzService != nil {
+						analyzersUpdate.Use(middleware.RequirePermission(s.authzService, interfaces.ResourceAnalyzer, interfaces.ActionUpdate))
+					}
+					{
+						analyzersUpdate.PUT("/:id", configHandler.UpdateAnalyzerConfig)
+					}
+
+					// 删除分析器配置
+					analyzersDelete := analyzers.Group("")
+					if s.authzService != nil {
+						analyzersDelete.Use(middleware.RequirePermission(s.authzService, interfaces.ResourceAnalyzer, interfaces.ActionDelete))
+					}
+					{
+						analyzersDelete.DELETE("/:id", configHandler.DeleteAnalyzerConfig)
+					}
+				}
+
+				// Processor configuration routes
+				processors := configGroup.Group("/processors")
+				{
+					// 读取处理器配置
+					processorsRead := processors.Group("")
+					if s.authzService != nil {
+						processorsRead.Use(middleware.RequirePermission(s.authzService, interfaces.ResourceProcessor, interfaces.ActionRead))
+					}
+					{
+						processorsRead.GET("", configHandler.ListProcessorConfigs)
+						processorsRead.GET("/:id", configHandler.GetProcessorConfig)
+					}
+
+					// 创建处理器配置
+					processorsCreate := processors.Group("")
+					if s.authzService != nil {
+						processorsCreate.Use(middleware.RequirePermission(s.authzService, interfaces.ResourceProcessor, interfaces.ActionCreate))
+					}
+					{
+						processorsCreate.POST("", configHandler.CreateProcessorConfig)
+					}
+
+					// 更新处理器配置
+					processorsUpdate := processors.Group("")
+					if s.authzService != nil {
+						processorsUpdate.Use(middleware.RequirePermission(s.authzService, interfaces.ResourceProcessor, interfaces.ActionUpdate))
+					}
+					{
+						processorsUpdate.PUT("/:id", configHandler.UpdateProcessorConfig)
+					}
+
+					// 删除处理器配置
+					processorsDelete := processors.Group("")
+					if s.authzService != nil {
+						processorsDelete.Use(middleware.RequirePermission(s.authzService, interfaces.ResourceProcessor, interfaces.ActionDelete))
+					}
+					{
+						processorsDelete.DELETE("/:id", configHandler.DeleteProcessorConfig)
+					}
+				}
+
+				// Template routes
+				templates := configGroup.Group("/templates")
+				{
+					// 读取模板 - 所有认证用户都可以
+					templates.GET("", configHandler.ListTemplates)
+					templates.GET("/:id", configHandler.GetTemplate)
+
+					// 创建、更新、删除模板需要 config:update 权限
+					templatesWrite := templates.Group("")
+					if s.authzService != nil {
+						templatesWrite.Use(middleware.RequirePermission(s.authzService, interfaces.ResourceConfig, interfaces.ActionUpdate))
+					}
+					{
+						templatesWrite.POST("", configHandler.CreateTemplate)
+						templatesWrite.PUT("/:id", configHandler.UpdateTemplate)
+						templatesWrite.DELETE("/:id", configHandler.DeleteTemplate)
+					}
+				}
+
+				// History routes - 需要 config:read 权限
+				historyGroup := configGroup.Group("/history")
+				if s.authzService != nil {
+					historyGroup.Use(middleware.RequirePermission(s.authzService, interfaces.ResourceConfig, interfaces.ActionRead))
+				}
+				{
+					historyGroup.GET("/:config_type/:config_id", configHandler.GetConfigHistory)
+				}
+
+				// Import/Export routes
+				exportGroup := configGroup.Group("/export")
+				if s.authzService != nil {
+					exportGroup.Use(middleware.RequirePermission(s.authzService, interfaces.ResourceConfig, interfaces.ActionExport))
+				}
+				{
+					exportGroup.GET("/:config_type", configHandler.ExportConfigs)
+				}
+
+				importGroup := configGroup.Group("/import")
+				if s.authzService != nil {
+					importGroup.Use(middleware.RequirePermission(s.authzService, interfaces.ResourceConfig, interfaces.ActionImport))
+				}
+				{
+					importGroup.POST("/:config_type", configHandler.ImportConfigs)
+				}
+
+				// Validation route - 所有认证用户都可以验证配置
+				configGroup.POST("/validate/:config_type", configHandler.ValidateConfig)
 			}
 		}
 	}
