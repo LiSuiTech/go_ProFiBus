@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"go_ProFiBus/api/handlers"
 	"go_ProFiBus/api/middleware"
+	"go_ProFiBus/internal/application/orchestrator"
 	websocket "go_ProFiBus/internal/interfaces/websocket"
 	"go_ProFiBus/logger"
 	"go_ProFiBus/pkg/interfaces"
@@ -41,19 +42,27 @@ func DefaultServerConfig() *ServerConfig {
 
 // Server REST API服务器
 type Server struct {
-	config     *ServerConfig
-	router     *gin.Engine
-	httpServer *http.Server
-	store      *storage.PostgresStore
-	wsHub      *websocket.Hub
-	tracer     interfaces.Tracer
-	log        *logger.Logger
-	ctx        context.Context
-	cancel     context.CancelFunc
+	config          *ServerConfig
+	router          *gin.Engine
+	httpServer      *http.Server
+	store           *storage.PostgresStore
+	wsHub           *websocket.Hub
+	tracer          interfaces.Tracer
+	traceRepository interfaces.TraceRepository
+	orchestrator    *orchestrator.Orchestrator
+	log             *logger.Logger
+	ctx             context.Context
+	cancel          context.CancelFunc
 }
 
 // NewServer 创建新的API服务器
-func NewServer(config *ServerConfig, store *storage.PostgresStore, tracer interfaces.Tracer) (*Server, error) {
+func NewServer(
+	config *ServerConfig,
+	store *storage.PostgresStore,
+	tracer interfaces.Tracer,
+	traceRepository interfaces.TraceRepository,
+	orch *orchestrator.Orchestrator,
+) (*Server, error) {
 	if config == nil {
 		config = DefaultServerConfig()
 	}
@@ -89,14 +98,16 @@ func NewServer(config *ServerConfig, store *storage.PostgresStore, tracer interf
 	ctx, cancel := context.WithCancel(context.Background())
 
 	server := &Server{
-		config: config,
-		router: router,
-		store:  store,
-		wsHub:  wsHub,
-		tracer: tracer,
-		log:    logger.GetLogger(),
-		ctx:    ctx,
-		cancel: cancel,
+		config:          config,
+		router:          router,
+		store:           store,
+		wsHub:           wsHub,
+		tracer:          tracer,
+		traceRepository: traceRepository,
+		orchestrator:    orch,
+		log:             logger.GetLogger(),
+		ctx:             ctx,
+		cancel:          cancel,
 	}
 
 	// 注册路由
@@ -123,6 +134,20 @@ func (s *Server) registerRoutes() {
 	sensorHandler := handlers.NewSensorHandler(s.store)
 	eventHandler := handlers.NewEventHandler(s.store)
 	ruleHandler := handlers.NewRuleHandler(s.store)
+
+	// 创建新的Phase 2 handlers
+	var pipelineHandler *handlers.PipelineHandler
+	var traceHandler *handlers.TraceHandler
+	var metricsHandler *handlers.MetricsHandler
+
+	if s.orchestrator != nil {
+		pipelineHandler = handlers.NewPipelineHandler(s.orchestrator)
+	}
+
+	if s.tracer != nil && s.traceRepository != nil {
+		traceHandler = handlers.NewTraceHandler(s.tracer, s.traceRepository)
+		metricsHandler = handlers.NewMetricsHandler(s.traceRepository)
+	}
 
 	// API v1路由组
 	v1 := s.router.Group("/api/v1")
@@ -152,6 +177,38 @@ func (s *Server) registerRoutes() {
 			rules.POST("", ruleHandler.CreateRule)
 			rules.PUT("/:rule_id", ruleHandler.UpdateRule)
 			rules.DELETE("/:rule_id", ruleHandler.DeleteRule)
+		}
+
+		// 管道管理路由 (Phase 2)
+		if pipelineHandler != nil {
+			pipelines := v1.Group("/pipelines")
+			{
+				pipelines.GET("", pipelineHandler.GetPipelines)
+				pipelines.GET("/:id/topology", pipelineHandler.GetPipelineTopology)
+				pipelines.GET("/:id/status", pipelineHandler.GetPipelineStatus)
+				pipelines.POST("/:id/start", pipelineHandler.StartPipeline)
+				pipelines.POST("/:id/stop", pipelineHandler.StopPipeline)
+				pipelines.GET("/:id/metrics", metricsHandler.GetPipelineMetrics)
+			}
+		}
+
+		// 追踪数据路由 (Phase 2)
+		if traceHandler != nil {
+			traces := v1.Group("/traces")
+			{
+				traces.GET("", traceHandler.GetTraces)
+				traces.GET("/samples/:sample_id", traceHandler.GetTraceBySample)
+				traces.GET("/stats", traceHandler.GetTraceStats)
+			}
+		}
+
+		// 性能指标路由 (Phase 2)
+		if metricsHandler != nil {
+			metrics := v1.Group("/metrics")
+			{
+				metrics.GET("/system", metricsHandler.GetSystemMetrics)
+				metrics.GET("/component", metricsHandler.GetComponentMetrics)
+			}
 		}
 	}
 }
