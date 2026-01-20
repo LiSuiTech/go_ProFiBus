@@ -1,3 +1,7 @@
+// Package fusion provides legacy data fusion functionality.
+//
+// Deprecated: This package is part of the legacy architecture.
+// New code should use internal/application/orchestrator for pipeline-based processing.
 package fusion
 
 import (

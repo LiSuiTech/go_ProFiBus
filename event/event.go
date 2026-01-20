@@ -1,3 +1,9 @@
+// Package event provides legacy event management functionality.
+//
+// Deprecated: This package is part of the legacy architecture.
+// New code should use:
+//   - internal/domain/event for event entities
+//   - pkg/interfaces/repository.go for event storage interfaces
 package event
 
 import (

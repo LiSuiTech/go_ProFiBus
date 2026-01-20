@@ -1,3 +1,7 @@
+// Package inference provides legacy ML inference functionality.
+//
+// Deprecated: This package is part of the legacy architecture.
+// New code should use pkg/interfaces/plugin.go for ML model integration.
 package inference
 
 import (
