@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	"go_ProFiBus/collector"
 	"go_ProFiBus/fusion"
 	"go_ProFiBus/pkg/interfaces"
 )
@@ -50,7 +51,7 @@ func NewFusionProcessor(name string, strategy fusion.FusionStrategy) *FusionProc
 	}
 
 	// 创建融合引擎
-	fp.fusionEngine = fusion.NewDataFusion(strategy)
+	fp.fusionEngine = fusion.NewDataFusion(strategy, fp.timeWindow)
 
 	return fp
 }
@@ -88,23 +89,18 @@ func (fp *FusionProcessor) Process(ctx context.Context, input interfaces.DataSam
 // fuseBufferedData 融合缓冲区中的数据
 func (fp *FusionProcessor) fuseBufferedData() (*fusion.FusedData, error) {
 	// 清空融合引擎
-	fp.fusionEngine = fusion.NewDataFusion(fp.strategy)
+	fp.fusionEngine = fusion.NewDataFusion(fp.strategy, fp.timeWindow)
 
 	// 添加所有缓冲的数据源
 	for sourceID, sample := range fp.buffer {
 		weight := fp.getSourceWeight(sourceID)
 
-		// 转换为旧格式 DataSample (fusion 包使用的格式)
-		oldSample := &struct {
-			Timestamp  time.Time
-			SourceID   string
-			Protocol   string
-			RawData    []byte
-			ParsedData map[string]interface{}
-			Quality    float64
-		}{
+		// 转换为collector.DataSample (fusion 包使用的格式)
+		oldSample := &collector.DataSample{
 			Timestamp:  sample.GetTimestamp(),
 			SourceID:   sample.GetSourceID(),
+			Protocol:   "",
+			RawData:    nil,
 			ParsedData: sample.GetData(),
 			Quality:    sample.GetQuality(),
 		}
@@ -215,7 +211,7 @@ func (fp *FusionProcessor) Initialize(config interfaces.ProcessorConfig) error {
 			return fmt.Errorf("invalid strategy: %w", err)
 		}
 		fp.strategy = strategy
-		fp.fusionEngine = fusion.NewDataFusion(strategy)
+		fp.fusionEngine = fusion.NewDataFusion(strategy, fp.timeWindow)
 	}
 
 	if weights, ok := config.Parameters["source_weights"].(map[string]interface{}); ok {

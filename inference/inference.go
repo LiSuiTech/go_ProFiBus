@@ -25,6 +25,28 @@ const (
 	ModelCustom
 )
 
+// String 返回模型类型名称
+func (mt ModelType) String() string {
+	switch mt {
+	case ModelLinearRegression:
+		return "linear_regression"
+	case ModelLogisticRegression:
+		return "logistic_regression"
+	case ModelDecisionTree:
+		return "decision_tree"
+	case ModelNeuralNetwork:
+		return "neural_network"
+	case ModelSVM:
+		return "svm"
+	case ModelKNN:
+		return "knn"
+	case ModelCustom:
+		return "custom"
+	default:
+		return "unknown"
+	}
+}
+
 // Tensor 张量数据结构
 type Tensor struct {
 	Shape []int     // 形状

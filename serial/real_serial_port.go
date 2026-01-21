@@ -38,7 +38,8 @@ func NewSerialPort(options ...Option) RealSerialPort {
 		return RealSerialPort{config: config}
 	}
 	// 如果使用真实模式，返回相应的实际实现
-	return nil // 实际实现未提供，这里返回 nil
+	// TODO: 实现真实串口模式
+	return RealSerialPort{config: config}
 }
 
 // Open 打开串口。

@@ -33,6 +33,34 @@ const (
 	StrategyExponentialSMA // 指数移动平均
 )
 
+// String 返回策略名称
+func (fs FusionStrategy) String() string {
+	switch fs {
+	case StrategyAverage:
+		return "average"
+	case StrategyWeighted:
+		return "weighted"
+	case StrategyKalman:
+		return "kalman"
+	case StrategyBayesian:
+		return "bayesian"
+	case StrategyDempsterShafer:
+		return "dempster_shafer"
+	case StrategyTimeSync:
+		return "time_sync"
+	case StrategyInterpolation:
+		return "interpolation"
+	case StrategyExtrapolation:
+		return "extrapolation"
+	case StrategyMovingAverage:
+		return "moving_average"
+	case StrategyExponentialSMA:
+		return "exponential_sma"
+	default:
+		return "unknown"
+	}
+}
+
 // FusedData 融合后的数据
 type FusedData struct {
 	Timestamp    time.Time              // 时间戳

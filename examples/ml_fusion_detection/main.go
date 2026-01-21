@@ -77,8 +77,8 @@ func main() {
 
 	fmt.Println("✓ 创建ML分析器 (神经网络模型)")
 
-	// 5. 创建Pipeline
-	pipeline, err := orchestrator.NewPipelineBuilder("ml-fusion-pipeline").
+	// 5. 创建Pipeline（可选 - 本示例采用手动调用方式演示各组件）
+	_, err = orchestrator.NewPipelineBuilder("ml-fusion-pipeline").
 		WithProcessor(fusionProcessor).
 		WithProcessor(featureExtractor).
 		WithAnalyzer(mlAnalyzer).
@@ -89,6 +89,7 @@ func main() {
 	}
 
 	fmt.Println("✓ 创建Pipeline: 融合 → 特征提取 → AI检测\n")
+	fmt.Println("（注：本示例采用手动调用方式演示各组件功能）\n")
 
 	// 6. 模拟数据流处理
 	fmt.Println("--- 开始处理数据 ---\n")
