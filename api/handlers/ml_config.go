@@ -1,18 +1,17 @@
 package handlers
 
 import (
-	"encoding/json"
 	"net/http"
 
-	"github.com/gorilla/mux"
-	"github.com/yourusername/go_ProFiBus/fusion"
-	"github.com/yourusername/go_ProFiBus/internal/application/processor"
-	"github.com/yourusername/go_ProFiBus/internal/infrastructure/analyzer"
+	"github.com/gin-gonic/gin"
+	"go_ProFiBus/fusion"
+	"go_ProFiBus/internal/application/processor"
+	"go_ProFiBus/internal/infrastructure/analyzer"
 )
 
 // MLConfigHandler ML配置API处理器
 type MLConfigHandler struct {
-	analyzers map[string]*analyzer.MLAnalyzer
+	analyzers        map[string]*analyzer.MLAnalyzer
 	fusionProcessors map[string]*processor.FusionProcessor
 }
 
@@ -25,35 +24,35 @@ func NewMLConfigHandler() *MLConfigHandler {
 }
 
 // RegisterRoutes 注册路由
-func (h *MLConfigHandler) RegisterRoutes(router *mux.Router) {
+func (h *MLConfigHandler) RegisterRoutes(router *gin.RouterGroup) {
 	// ML分析器配置
-	router.HandleFunc("/api/v1/ml/analyzers", h.ListAnalyzers).Methods("GET")
-	router.HandleFunc("/api/v1/ml/analyzers", h.CreateAnalyzer).Methods("POST")
-	router.HandleFunc("/api/v1/ml/analyzers/{id}", h.GetAnalyzer).Methods("GET")
-	router.HandleFunc("/api/v1/ml/analyzers/{id}", h.UpdateAnalyzer).Methods("PUT")
-	router.HandleFunc("/api/v1/ml/analyzers/{id}", h.DeleteAnalyzer).Methods("DELETE")
-	router.HandleFunc("/api/v1/ml/analyzers/{id}/stats", h.GetAnalyzerStats).Methods("GET")
+	router.GET("/ml/analyzers", h.ListAnalyzers)
+	router.POST("/ml/analyzers", h.CreateAnalyzer)
+	router.GET("/ml/analyzers/:id", h.GetAnalyzer)
+	router.PUT("/ml/analyzers/:id", h.UpdateAnalyzer)
+	router.DELETE("/ml/analyzers/:id", h.DeleteAnalyzer)
+	router.GET("/ml/analyzers/:id/stats", h.GetAnalyzerStats)
 
 	// 融合处理器配置
-	router.HandleFunc("/api/v1/ml/fusion", h.ListFusionProcessors).Methods("GET")
-	router.HandleFunc("/api/v1/ml/fusion", h.CreateFusionProcessor).Methods("POST")
-	router.HandleFunc("/api/v1/ml/fusion/{id}", h.GetFusionProcessor).Methods("GET")
-	router.HandleFunc("/api/v1/ml/fusion/{id}", h.UpdateFusionProcessor).Methods("PUT")
-	router.HandleFunc("/api/v1/ml/fusion/{id}", h.DeleteFusionProcessor).Methods("DELETE")
+	router.GET("/ml/fusion", h.ListFusionProcessors)
+	router.POST("/ml/fusion", h.CreateFusionProcessor)
+	router.GET("/ml/fusion/:id", h.GetFusionProcessor)
+	router.PUT("/ml/fusion/:id", h.UpdateFusionProcessor)
+	router.DELETE("/ml/fusion/:id", h.DeleteFusionProcessor)
 
 	// 配置Schema
-	router.HandleFunc("/api/v1/ml/schema/analyzer", h.GetAnalyzerSchema).Methods("GET")
-	router.HandleFunc("/api/v1/ml/schema/fusion", h.GetFusionSchema).Methods("GET")
+	router.GET("/ml/schema/analyzer", h.GetAnalyzerSchema)
+	router.GET("/ml/schema/fusion", h.GetFusionSchema)
 
 	// 模型管理
-	router.HandleFunc("/api/v1/ml/models", h.ListModels).Methods("GET")
-	router.HandleFunc("/api/v1/ml/models/{id}/upload", h.UploadModel).Methods("POST")
+	router.GET("/ml/models", h.ListModels)
+	router.POST("/ml/models/:id/upload", h.UploadModel)
 }
 
 // === ML分析器API ===
 
 // ListAnalyzers 获取所有ML分析器
-func (h *MLConfigHandler) ListAnalyzers(w http.ResponseWriter, r *http.Request) {
+func (h *MLConfigHandler) ListAnalyzers(c *gin.Context) {
 	analyzers := make([]map[string]interface{}, 0)
 
 	for id, analyzer := range h.analyzers {
@@ -70,41 +69,35 @@ func (h *MLConfigHandler) ListAnalyzers(w http.ResponseWriter, r *http.Request) 
 		})
 	}
 
-	respondJSON(w, http.StatusOK, map[string]interface{}{
+	c.JSON(http.StatusOK, gin.H{
 		"analyzers": analyzers,
 		"count":     len(analyzers),
 	})
 }
 
 // CreateAnalyzer 创建ML分析器
-func (h *MLConfigHandler) CreateAnalyzer(w http.ResponseWriter, r *http.Request) {
+func (h *MLConfigHandler) CreateAnalyzer(c *gin.Context) {
 	var req struct {
-		ID               string                 `json:"id"`
-		Name             string                 `json:"name"`
-		ModelName        string                 `json:"model_name"`
-		ModelType        string                 `json:"model_type"`
-		ModelPath        string                 `json:"model_path"`
-		AnomalyThreshold float64                `json:"anomaly_threshold"`
-		ConfidenceMin    float64                `json:"confidence_min"`
-		UseFeatureExtractor bool                `json:"use_feature_extractor"`
-		Features         []string               `json:"features"`
-		ModelConfig      map[string]interface{} `json:"model_config"`
+		ID                  string                 `json:"id" binding:"required"`
+		Name                string                 `json:"name" binding:"required"`
+		ModelName           string                 `json:"model_name" binding:"required"`
+		ModelType           string                 `json:"model_type"`
+		ModelPath           string                 `json:"model_path"`
+		AnomalyThreshold    float64                `json:"anomaly_threshold"`
+		ConfidenceMin       float64                `json:"confidence_min"`
+		UseFeatureExtractor bool                   `json:"use_feature_extractor"`
+		Features            []string               `json:"features"`
+		ModelConfig         map[string]interface{} `json:"model_config"`
 	}
 
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		respondError(w, http.StatusBadRequest, "Invalid request body")
-		return
-	}
-
-	// 验证必填字段
-	if req.ID == "" || req.Name == "" || req.ModelName == "" {
-		respondError(w, http.StatusBadRequest, "Missing required fields: id, name, model_name")
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body: " + err.Error()})
 		return
 	}
 
 	// 检查ID是否已存在
 	if _, exists := h.analyzers[req.ID]; exists {
-		respondError(w, http.StatusConflict, "Analyzer with this ID already exists")
+		c.JSON(http.StatusConflict, gin.H{"error": "Analyzer with this ID already exists"})
 		return
 	}
 
@@ -113,25 +106,25 @@ func (h *MLConfigHandler) CreateAnalyzer(w http.ResponseWriter, r *http.Request)
 
 	// 配置分析器
 	config := map[string]interface{}{
-		"model_name":          req.ModelName,
-		"model_type":          req.ModelType,
-		"model_path":          req.ModelPath,
-		"anomaly_threshold":   req.AnomalyThreshold,
-		"confidence_min":      req.ConfidenceMin,
+		"model_name":            req.ModelName,
+		"model_type":            req.ModelType,
+		"model_path":            req.ModelPath,
+		"anomaly_threshold":     req.AnomalyThreshold,
+		"confidence_min":        req.ConfidenceMin,
 		"use_feature_extractor": req.UseFeatureExtractor,
-		"features":            req.Features,
-		"model_config":        req.ModelConfig,
+		"features":              req.Features,
+		"model_config":          req.ModelConfig,
 	}
 
 	if err := mlAnalyzer.Configure(config); err != nil {
-		respondError(w, http.StatusInternalServerError, "Failed to configure analyzer: "+err.Error())
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to configure analyzer: " + err.Error()})
 		return
 	}
 
 	// 保存分析器
 	h.analyzers[req.ID] = mlAnalyzer
 
-	respondJSON(w, http.StatusCreated, map[string]interface{}{
+	c.JSON(http.StatusCreated, gin.H{
 		"id":      req.ID,
 		"name":    req.Name,
 		"message": "ML Analyzer created successfully",
@@ -139,42 +132,40 @@ func (h *MLConfigHandler) CreateAnalyzer(w http.ResponseWriter, r *http.Request)
 }
 
 // GetAnalyzer 获取单个ML分析器
-func (h *MLConfigHandler) GetAnalyzer(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	id := vars["id"]
+func (h *MLConfigHandler) GetAnalyzer(c *gin.Context) {
+	id := c.Param("id")
 
 	analyzer, exists := h.analyzers[id]
 	if !exists {
-		respondError(w, http.StatusNotFound, "Analyzer not found")
+		c.JSON(http.StatusNotFound, gin.H{"error": "Analyzer not found"})
 		return
 	}
 
 	stats := analyzer.GetStats()
 
-	respondJSON(w, http.StatusOK, map[string]interface{}{
-		"id":             id,
-		"name":           analyzer.GetName(),
-		"type":           analyzer.GetType(),
-		"threshold":      analyzer.GetThreshold(),
-		"anomaly_rate":   analyzer.GetAnomalyRate(),
-		"stats": map[string]interface{}{
-			"total_samples":      stats.TotalSamples,
-			"anomalies_detected": stats.AnomaliesDetected,
-			"avg_inference_time": stats.AvgInferenceTime.String(),
+	c.JSON(http.StatusOK, gin.H{
+		"id":           id,
+		"name":         analyzer.GetName(),
+		"type":         analyzer.GetType(),
+		"threshold":    analyzer.GetThreshold(),
+		"anomaly_rate": analyzer.GetAnomalyRate(),
+		"stats": gin.H{
+			"total_samples":       stats.TotalSamples,
+			"anomalies_detected":  stats.AnomaliesDetected,
+			"avg_inference_time":  stats.AvgInferenceTime.String(),
 			"last_inference_time": stats.LastInferenceTime.String(),
-			"model_accuracy":     stats.ModelAccuracy,
+			"model_accuracy":      stats.ModelAccuracy,
 		},
 	})
 }
 
 // UpdateAnalyzer 更新ML分析器配置
-func (h *MLConfigHandler) UpdateAnalyzer(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	id := vars["id"]
+func (h *MLConfigHandler) UpdateAnalyzer(c *gin.Context) {
+	id := c.Param("id")
 
 	analyzer, exists := h.analyzers[id]
 	if !exists {
-		respondError(w, http.StatusNotFound, "Analyzer not found")
+		c.JSON(http.StatusNotFound, gin.H{"error": "Analyzer not found"})
 		return
 	}
 
@@ -183,8 +174,8 @@ func (h *MLConfigHandler) UpdateAnalyzer(w http.ResponseWriter, r *http.Request)
 		ConfidenceMin    float64 `json:"confidence_min"`
 	}
 
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		respondError(w, http.StatusBadRequest, "Invalid request body")
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
 		return
 	}
 
@@ -193,19 +184,18 @@ func (h *MLConfigHandler) UpdateAnalyzer(w http.ResponseWriter, r *http.Request)
 		analyzer.SetThreshold(req.AnomalyThreshold)
 	}
 
-	respondJSON(w, http.StatusOK, map[string]interface{}{
+	c.JSON(http.StatusOK, gin.H{
 		"id":      id,
 		"message": "Analyzer updated successfully",
 	})
 }
 
 // DeleteAnalyzer 删除ML分析器
-func (h *MLConfigHandler) DeleteAnalyzer(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	id := vars["id"]
+func (h *MLConfigHandler) DeleteAnalyzer(c *gin.Context) {
+	id := c.Param("id")
 
 	if _, exists := h.analyzers[id]; !exists {
-		respondError(w, http.StatusNotFound, "Analyzer not found")
+		c.JSON(http.StatusNotFound, gin.H{"error": "Analyzer not found"})
 		return
 	}
 
@@ -213,38 +203,37 @@ func (h *MLConfigHandler) DeleteAnalyzer(w http.ResponseWriter, r *http.Request)
 	h.analyzers[id].Close()
 	delete(h.analyzers, id)
 
-	respondJSON(w, http.StatusOK, map[string]interface{}{
+	c.JSON(http.StatusOK, gin.H{
 		"message": "Analyzer deleted successfully",
 	})
 }
 
 // GetAnalyzerStats 获取分析器统计信息
-func (h *MLConfigHandler) GetAnalyzerStats(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	id := vars["id"]
+func (h *MLConfigHandler) GetAnalyzerStats(c *gin.Context) {
+	id := c.Param("id")
 
 	analyzer, exists := h.analyzers[id]
 	if !exists {
-		respondError(w, http.StatusNotFound, "Analyzer not found")
+		c.JSON(http.StatusNotFound, gin.H{"error": "Analyzer not found"})
 		return
 	}
 
 	stats := analyzer.GetStats()
 
-	respondJSON(w, http.StatusOK, map[string]interface{}{
-		"total_samples":      stats.TotalSamples,
-		"anomalies_detected": stats.AnomaliesDetected,
-		"anomaly_rate":       analyzer.GetAnomalyRate(),
-		"avg_inference_time_ms": stats.AvgInferenceTime.Milliseconds(),
+	c.JSON(http.StatusOK, gin.H{
+		"total_samples":          stats.TotalSamples,
+		"anomalies_detected":     stats.AnomaliesDetected,
+		"anomaly_rate":           analyzer.GetAnomalyRate(),
+		"avg_inference_time_ms":  stats.AvgInferenceTime.Milliseconds(),
 		"last_inference_time_ms": stats.LastInferenceTime.Milliseconds(),
-		"model_accuracy":     stats.ModelAccuracy,
+		"model_accuracy":         stats.ModelAccuracy,
 	})
 }
 
 // === 融合处理器API ===
 
 // ListFusionProcessors 获取所有融合处理器
-func (h *MLConfigHandler) ListFusionProcessors(w http.ResponseWriter, r *http.Request) {
+func (h *MLConfigHandler) ListFusionProcessors(c *gin.Context) {
 	processors := make([]map[string]interface{}, 0)
 
 	for id, proc := range h.fusionProcessors {
@@ -254,36 +243,31 @@ func (h *MLConfigHandler) ListFusionProcessors(w http.ResponseWriter, r *http.Re
 		})
 	}
 
-	respondJSON(w, http.StatusOK, map[string]interface{}{
+	c.JSON(http.StatusOK, gin.H{
 		"processors": processors,
 		"count":      len(processors),
 	})
 }
 
 // CreateFusionProcessor 创建融合处理器
-func (h *MLConfigHandler) CreateFusionProcessor(w http.ResponseWriter, r *http.Request) {
+func (h *MLConfigHandler) CreateFusionProcessor(c *gin.Context) {
 	var req struct {
-		ID            string             `json:"id"`
-		Name          string             `json:"name"`
+		ID            string             `json:"id" binding:"required"`
+		Name          string             `json:"name" binding:"required"`
 		Strategy      string             `json:"strategy"`
 		SourceWeights map[string]float64 `json:"source_weights"`
 		TimeWindow    string             `json:"time_window"`
 		BufferSize    int                `json:"buffer_size"`
 	}
 
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		respondError(w, http.StatusBadRequest, "Invalid request body")
-		return
-	}
-
-	if req.ID == "" || req.Name == "" {
-		respondError(w, http.StatusBadRequest, "Missing required fields: id, name")
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
 		return
 	}
 
 	// 检查ID是否已存在
 	if _, exists := h.fusionProcessors[req.ID]; exists {
-		respondError(w, http.StatusConflict, "Fusion processor with this ID already exists")
+		c.JSON(http.StatusConflict, gin.H{"error": "Fusion processor with this ID already exists"})
 		return
 	}
 
@@ -301,7 +285,7 @@ func (h *MLConfigHandler) CreateFusionProcessor(w http.ResponseWriter, r *http.R
 	// 保存
 	h.fusionProcessors[req.ID] = fusionProc
 
-	respondJSON(w, http.StatusCreated, map[string]interface{}{
+	c.JSON(http.StatusCreated, gin.H{
 		"id":      req.ID,
 		"name":    req.Name,
 		"message": "Fusion processor created successfully",
@@ -309,30 +293,28 @@ func (h *MLConfigHandler) CreateFusionProcessor(w http.ResponseWriter, r *http.R
 }
 
 // GetFusionProcessor 获取单个融合处理器
-func (h *MLConfigHandler) GetFusionProcessor(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	id := vars["id"]
+func (h *MLConfigHandler) GetFusionProcessor(c *gin.Context) {
+	id := c.Param("id")
 
 	proc, exists := h.fusionProcessors[id]
 	if !exists {
-		respondError(w, http.StatusNotFound, "Fusion processor not found")
+		c.JSON(http.StatusNotFound, gin.H{"error": "Fusion processor not found"})
 		return
 	}
 
-	respondJSON(w, http.StatusOK, map[string]interface{}{
+	c.JSON(http.StatusOK, gin.H{
 		"id":   id,
 		"name": proc.GetName(),
 	})
 }
 
 // UpdateFusionProcessor 更新融合处理器
-func (h *MLConfigHandler) UpdateFusionProcessor(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	id := vars["id"]
+func (h *MLConfigHandler) UpdateFusionProcessor(c *gin.Context) {
+	id := c.Param("id")
 
 	proc, exists := h.fusionProcessors[id]
 	if !exists {
-		respondError(w, http.StatusNotFound, "Fusion processor not found")
+		c.JSON(http.StatusNotFound, gin.H{"error": "Fusion processor not found"})
 		return
 	}
 
@@ -340,8 +322,8 @@ func (h *MLConfigHandler) UpdateFusionProcessor(w http.ResponseWriter, r *http.R
 		SourceWeights map[string]float64 `json:"source_weights"`
 	}
 
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		respondError(w, http.StatusBadRequest, "Invalid request body")
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
 		return
 	}
 
@@ -350,25 +332,24 @@ func (h *MLConfigHandler) UpdateFusionProcessor(w http.ResponseWriter, r *http.R
 		proc.SetSourceWeight(sourceID, weight)
 	}
 
-	respondJSON(w, http.StatusOK, map[string]interface{}{
+	c.JSON(http.StatusOK, gin.H{
 		"id":      id,
 		"message": "Fusion processor updated successfully",
 	})
 }
 
 // DeleteFusionProcessor 删除融合处理器
-func (h *MLConfigHandler) DeleteFusionProcessor(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	id := vars["id"]
+func (h *MLConfigHandler) DeleteFusionProcessor(c *gin.Context) {
+	id := c.Param("id")
 
 	if _, exists := h.fusionProcessors[id]; !exists {
-		respondError(w, http.StatusNotFound, "Fusion processor not found")
+		c.JSON(http.StatusNotFound, gin.H{"error": "Fusion processor not found"})
 		return
 	}
 
 	delete(h.fusionProcessors, id)
 
-	respondJSON(w, http.StatusOK, map[string]interface{}{
+	c.JSON(http.StatusOK, gin.H{
 		"message": "Fusion processor deleted successfully",
 	})
 }
@@ -376,7 +357,7 @@ func (h *MLConfigHandler) DeleteFusionProcessor(w http.ResponseWriter, r *http.R
 // === 配置Schema ===
 
 // GetAnalyzerSchema 获取ML分析器配置Schema (用于前端表单生成)
-func (h *MLConfigHandler) GetAnalyzerSchema(w http.ResponseWriter, r *http.Request) {
+func (h *MLConfigHandler) GetAnalyzerSchema(c *gin.Context) {
 	schema := map[string]interface{}{
 		"$schema": "http://json-schema.org/draft-07/schema#",
 		"title":   "ML Analyzer Configuration",
@@ -466,11 +447,11 @@ func (h *MLConfigHandler) GetAnalyzerSchema(w http.ResponseWriter, r *http.Reque
 		"required": []string{"id", "name", "model_name", "model_type"},
 	}
 
-	respondJSON(w, http.StatusOK, schema)
+	c.JSON(http.StatusOK, schema)
 }
 
 // GetFusionSchema 获取融合处理器配置Schema
-func (h *MLConfigHandler) GetFusionSchema(w http.ResponseWriter, r *http.Request) {
+func (h *MLConfigHandler) GetFusionSchema(c *gin.Context) {
 	schema := map[string]interface{}{
 		"$schema": "http://json-schema.org/draft-07/schema#",
 		"title":   "Fusion Processor Configuration",
@@ -492,16 +473,16 @@ func (h *MLConfigHandler) GetFusionSchema(w http.ResponseWriter, r *http.Request
 				"title":       "融合策略",
 				"description": "选择数据融合算法",
 				"enum": []string{
-					"average",           // 平均融合
-					"weighted",          // 加权融合
-					"kalman",            // 卡尔曼滤波
-					"bayesian",          // 贝叶斯融合
-					"dempster_shafer",   // D-S证据理论
-					"time_sync",         // 时间同步
-					"interpolation",     // 插值
-					"extrapolation",     // 外推
-					"moving_average",    // 移动平均
-					"exponential_sma",   // 指数移动平均
+					"average",
+					"weighted",
+					"kalman",
+					"bayesian",
+					"dempster_shafer",
+					"time_sync",
+					"interpolation",
+					"extrapolation",
+					"moving_average",
+					"exponential_sma",
 				},
 				"default": "weighted",
 			},
@@ -534,13 +515,13 @@ func (h *MLConfigHandler) GetFusionSchema(w http.ResponseWriter, r *http.Request
 		"required": []string{"id", "name", "strategy"},
 	}
 
-	respondJSON(w, http.StatusOK, schema)
+	c.JSON(http.StatusOK, schema)
 }
 
 // === 模型管理 ===
 
 // ListModels 获取可用模型列表
-func (h *MLConfigHandler) ListModels(w http.ResponseWriter, r *http.Request) {
+func (h *MLConfigHandler) ListModels(c *gin.Context) {
 	models := []map[string]interface{}{
 		{
 			"id":          "anomaly-nn-v1",
@@ -562,34 +543,27 @@ func (h *MLConfigHandler) ListModels(w http.ResponseWriter, r *http.Request) {
 		},
 	}
 
-	respondJSON(w, http.StatusOK, map[string]interface{}{
+	c.JSON(http.StatusOK, gin.H{
 		"models": models,
 		"count":  len(models),
 	})
 }
 
 // UploadModel 上传模型文件
-func (h *MLConfigHandler) UploadModel(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	id := vars["id"]
+func (h *MLConfigHandler) UploadModel(c *gin.Context) {
+	id := c.Param("id")
 
 	// 解析multipart form
-	err := r.ParseMultipartForm(32 << 20) // 32MB max
+	file, err := c.FormFile("model")
 	if err != nil {
-		respondError(w, http.StatusBadRequest, "Failed to parse form")
+		c.JSON(http.StatusBadRequest, gin.H{"error": "No model file provided"})
 		return
 	}
-
-	file, _, err := r.FormFile("model")
-	if err != nil {
-		respondError(w, http.StatusBadRequest, "No model file provided")
-		return
-	}
-	defer file.Close()
 
 	// TODO: 保存模型文件到存储
+	_ = file
 
-	respondJSON(w, http.StatusOK, map[string]interface{}{
+	c.JSON(http.StatusOK, gin.H{
 		"id":      id,
 		"message": "Model uploaded successfully",
 	})
@@ -622,16 +596,4 @@ func parseStrategyFromString(strategy string) fusion.FusionStrategy {
 	default:
 		return fusion.StrategyWeighted
 	}
-}
-
-func respondJSON(w http.ResponseWriter, status int, data interface{}) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteStatus(status)
-	json.NewEncoder(w).Encode(data)
-}
-
-func respondError(w http.ResponseWriter, status int, message string) {
-	respondJSON(w, status, map[string]interface{}{
-		"error": message,
-	})
 }

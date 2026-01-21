@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/yourusername/go_profibus/pkg/interfaces"
+	"go_ProFiBus/pkg/interfaces"
 	"golang.org/x/crypto/bcrypt"
 )
 

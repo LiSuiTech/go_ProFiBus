@@ -6,9 +6,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/yourusername/go_ProFiBus/inference"
-	"github.com/yourusername/go_ProFiBus/internal/application/processor"
-	"github.com/yourusername/go_ProFiBus/pkg/interfaces"
+	"go_ProFiBus/inference"
+	"go_ProFiBus/internal/application/processor"
+	"go_ProFiBus/pkg/interfaces"
 )
 
 // MLAnalyzer 机器学习分析器
@@ -111,7 +111,17 @@ func (mla *MLAnalyzer) extractFeatures(data interfaces.DataSample) (*inference.T
 
 	// 如果有特征提取器，使用它
 	if mla.featureExtractor != nil {
-		return mla.featureExtractor.Process(context.Background(), data)
+		processedSample, err := mla.featureExtractor.Process(context.Background(), data)
+		if err != nil {
+			return nil, err
+		}
+		// 从处理后的样本中提取features
+		metadata := processedSample.GetMetadata()
+		if metadata != nil {
+			if features, ok := metadata["features"].(*inference.Tensor); ok {
+				return features, nil
+			}
+		}
 	}
 
 	// 否则从样本中直接提取

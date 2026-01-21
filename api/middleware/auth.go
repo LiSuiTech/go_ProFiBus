@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
-	"github.com/yourusername/go_profibus/pkg/interfaces"
+	"go_ProFiBus/pkg/interfaces"
 )
 
 // ContextKey type for context keys

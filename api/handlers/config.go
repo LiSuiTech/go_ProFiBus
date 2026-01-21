@@ -6,8 +6,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/yourusername/go_profibus/internal/domain/config"
-	"github.com/yourusername/go_profibus/pkg/interfaces"
+	"go_ProFiBus/internal/domain/config"
+	"go_ProFiBus/pkg/interfaces"
 )
 
 // ConfigHandler handles configuration-related HTTP requests
