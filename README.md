@@ -39,12 +39,15 @@
 - **I2C** - 互连集成电路
 - **SPI** - 串行外设接口
 
-### 📊 数据采集
-- 多源并发数据采集
-- 可配置采样率和缓冲区
-- 自动重试机制
-- 数据质量评估
-- 实时统计信息
+### 📊 数据采集与通道管理
+- **Web 界面管理** - 通过 Dashboard 可视化配置采集通道
+- **9 种协议支持** - UART、CAN、USB、Modbus、RS-485、RS-232、I2C、SPI、1-Wire
+- **点位配置** - 灵活配置采集点位、地址映射、缩放系数
+- **多源并发采集** - 支持 100+ 并发数据源
+- **可配置采样率** - 自定义采样频率和缓冲区
+- **自动重试机制** - 连接失败自动重试
+- **数据质量评估** - 实时质量检查和异常标记
+- **配置热重载** - 运行时修改配置，无需重启
 
 ### 🔀 数据融合
 支持多种融合策略：
@@ -82,12 +85,23 @@
 - 跨模态融合
 - 流式分析
 
+### 🎨 Web 管理界面
+- **Vue 3 Dashboard** - 现代化的 SPA 管理平台
+- **实时监控** - WebSocket 实时推送数据和事件
+- **Pipeline 管理** - 可视化 Pipeline 拓扑和性能
+- **采集通道管理** - 配置设备、协议、点位
+- **追踪时间线** - 完整的数据流追踪记录
+- **算法配置** - 动态配置检测规则和分析器
+- **用户权限管理** - RBAC 基于角色的访问控制
+
 ### 🛠️ 其他特性
 - 统一的接口设计
 - YAML 配置文件支持
 - 完善的错误处理
 - 结构化日志系统
 - 线程安全设计
+- RESTful API 设计
+- Swagger/OpenAPI 文档
 
 ## 📦 安装
 
@@ -143,6 +157,73 @@ docker-compose logs -f profibus
 
 # 5. 停止服务
 docker-compose down
+```
+
+### 使用 Web Dashboard 管理系统
+
+访问 Dashboard：http://localhost:8888
+
+#### 1. 配置采集通道
+
+```
+导航到 "采集通道" 页面
+  ↓
+点击 "新增通道"
+  ↓
+填写配置：
+  - 通道名称：温度传感器1
+  - 协议类型：Modbus
+  - 设备端口：/dev/ttyUSB0
+  - 波特率：115200
+  - 从站ID：1
+  ↓
+保存并启动通道
+```
+
+#### 2. 配置采集点位
+
+```
+点击通道的 "点位数量"
+  ↓
+点击 "新增点位"
+  ↓
+填写配置：
+  - 点位名称：当前温度
+  - 地址：40001 (Modbus 寄存器)
+  - 数据类型：float
+  - 缩放系数：0.1
+  - 偏移量：-273.15
+  - 单位：℃
+  ↓
+保存配置
+```
+
+#### 3. 查看实时数据
+
+```
+返回 "控制面板"
+  ↓
+查看 Pipeline 列表和状态
+  ↓
+点击 Pipeline 查看详情：
+  - 拓扑图：可视化数据流
+  - 性能指标：吞吐量、耗时、成功率
+  - 实时追踪：数据处理过程
+```
+
+#### 4. 配置算法规则
+
+```
+访问算法配置页面（如已实现）
+  ↓
+创建检测规则：
+  - 规则名称：高温告警
+  - 类型：阈值规则
+  - 字段：temperature
+  - 条件：> 80℃
+  - 严重级别：WARNING
+  ↓
+保存并应用规则
 ```
 
 ### 使用 Kubernetes
@@ -644,6 +725,9 @@ Vue 3 Dashboard
 - [x] Vue 3 可视化 Dashboard
 - [x] REST API endpoints
 - [x] 高级可视化组件
+  - D3.js 拓扑图
+  - ECharts 性能图表
+  - 实时追踪时间线
 
 ### Phase 3: 算法配置系统 ✅ 已完成
 - [x] 基于 ConfigSchema 的表单生成
@@ -651,14 +735,66 @@ Vue 3 Dashboard
 - [x] Plugin Registry 动态加载
 - [x] 算法配置 REST API
 - [x] RBAC 权限管理系统
+  - 用户管理
+  - 角色管理
+  - 权限控制
+  - JWT 认证
+- [x] 配置版本管理和审计
+- [x] 配置热重载机制
 
 ### Phase 4: 容器化部署 ✅ 已完成
 - [x] Docker 多阶段构建（镜像优化至 40MB）
 - [x] docker-compose 编排（PostgreSQL + Redis + 监控）
 - [x] Kubernetes 部署配置（生产级配置）
+  - StatefulSet（数据库）
+  - Deployment（应用）
+  - HPA（自动扩缩容）
+  - Ingress（外部访问）
 - [x] CI/CD 流水线（GitHub Actions）
+  - 自动化测试
+  - 安全扫描（Trivy + gosec）
+  - 多平台构建（amd64 + arm64）
+  - 自动部署（Staging + Production）
 - [x] Prometheus + Grafana 监控
-- [x] 自动化部署和扩缩容
+- [x] Vue 3 Dashboard 容器化
+- [x] 采集通道管理功能（Web UI + Backend）
+  - 9 种工业协议支持
+  - 点位配置和映射
+  - 配置热重载
+  - 实时状态监控
+
+## 🎨 Web Dashboard 功能模块
+
+### 当前支持的功能页面
+
+| 模块 | 页面路径 | 功能描述 |
+|------|---------|---------|
+| **控制面板** | `/` | Pipeline 列表、实时追踪、统计信息 |
+| **Pipeline 详情** | `/pipeline/:id` | 拓扑可视化、性能指标、组件状态 |
+| **采集通道管理** | `/channels` | 设备配置、协议选择、点位管理 ⭐ |
+
+### 核心可视化组件
+
+- **TopologyGraph** - Pipeline 拓扑图（D3.js）
+- **TraceTimeline** - 追踪事件时间线
+- **MetricsChart** - 性能指标图表（ECharts）
+- **ThroughputChart** - 吞吐量趋势图
+
+### 实时功能
+
+- ✅ WebSocket 实时数据推送
+- ✅ 实时告警通知
+- ✅ 动态图表更新
+- ✅ Pipeline 状态监控
+
+### 技术栈
+
+- **前端框架**: Vue 3 + TypeScript
+- **UI 组件**: Element Plus
+- **可视化**: ECharts + D3.js
+- **状态管理**: Pinia
+- **路由**: Vue Router
+- **HTTP**: Axios
 
 ## 📊 性能指标
 
@@ -666,6 +802,8 @@ Vue 3 Dashboard
 - 单通道采样率可达 10kHz
 - 数据融合延迟 < 10ms
 - 模型推理时间 < 5ms (CPU)
+- Docker 镜像大小：40MB（优化 95%）
+- 启动时间：< 5 秒
 
 ## ⚠️ 注意事项
 
@@ -694,20 +832,53 @@ A: 推荐使用 Kubernetes 部署。详细步骤请参考 [DEPLOYMENT.md](./docs
 **Q: 如何监控应用性能？**
 A: 系统集成了 Prometheus + Grafana。应用在 8081 端口暴露 `/metrics` endpoint，Prometheus 自动采集指标，Grafana 提供可视化面板。
 
+**Q: 如何配置采集通道？**
+A: 访问 Dashboard 的"采集通道"页面，可以通过 Web 界面配置设备、选择协议、设置点位。支持 9 种工业通信协议，配置后可实时生效。详见 [采集通道集成指南](./docs/CHANNEL_INTEGRATION_GUIDE.md)。
+
+**Q: 配置修改后如何生效？**
+A: 系统支持配置热重载。通过 Web UI 修改配置后，会通过 Redis Pub/Sub 或定时轮询通知采集器，采集器自动重载配置，无需重启服务。详见 [技术实现细节](./docs/TECHNICAL_FLOW_DETAILS.md)。
+
+**Q: 如何查看系统业务流程？**
+A: 请参考 [业务流程说明](./docs/BUSINESS_FLOW.md)，包含完整的配置流程、数据接入与解析、算法计算等详细说明。
+
 ---
 
 **如果这个项目对你有帮助，请给个 ⭐ Star！**
 
 ## 📖 更多文档
 
-### 核心文档
+### 🎯 核心文档
 - **[架构文档](./ARCHITECTURE.md)** - 详细的架构设计和迁移指南 ⭐
+- **[业务流程说明](./docs/BUSINESS_FLOW.md)** - 完整业务逻辑和数据流程 📊
+- **[技术实现细节](./docs/TECHNICAL_FLOW_DETAILS.md)** - 配置监听、数据解析、算法计算 🔧
 - **[部署指南](./docs/DEPLOYMENT.md)** - 完整的部署和运维指南 🚀
 - **[数据库设计](./docs/DATABASE.md)** - TimescaleDB 时序数据库设计
 
-### Phase 实施文档
+### 📋 Phase 实施文档
 - **[Phase 1 总结](./PHASE1_SUMMARY.md)** - Phase 1 重构成果和技术细节
 - **[Phase 2 计划](./PHASE2_PLAN.md)** - Phase 2 数据流可视化实施计划
 - **[Phase 3 实施](./docs/PHASE3_IMPLEMENTATION.md)** - 算法配置系统和 RBAC 实施详情
 - **[Phase 4 容器化](./docs/PHASE4_CONTAINERIZATION.md)** - 容器化和部署完整实施方案
+
+### 🔌 功能集成文档
+- **[采集通道集成指南](./docs/CHANNEL_INTEGRATION_GUIDE.md)** - 采集通道管理功能集成步骤 ⭐
+
+### 📚 推荐阅读顺序
+
+**新手入门**：
+1. README.md（本文档）
+2. ARCHITECTURE.md（了解架构）
+3. 快速开始（Docker Compose 部署）
+4. BUSINESS_FLOW.md（理解业务流程）
+
+**开发者**：
+1. ARCHITECTURE.md（架构设计）
+2. TECHNICAL_FLOW_DETAILS.md（技术实现）
+3. CHANNEL_INTEGRATION_GUIDE.md（功能集成）
+4. Phase 实施文档（历史演进）
+
+**运维人员**：
+1. DEPLOYMENT.md（部署指南）
+2. BUSINESS_FLOW.md（系统配置）
+3. DATABASE.md（数据库管理）
 
