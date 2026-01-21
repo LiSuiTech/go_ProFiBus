@@ -6,9 +6,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/yourusername/go_ProFiBus/inference"
-	"github.com/yourusername/go_ProFiBus/internal/application/processor"
-	"github.com/yourusername/go_ProFiBus/pkg/interfaces"
+	"go_ProFiBus/inference"
+	"go_ProFiBus/internal/application/processor"
+	"go_ProFiBus/pkg/interfaces"
 )
 
 // MLAnalyzer 机器学习分析器

@@ -7,12 +7,12 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/yourusername/go_ProFiBus/fusion"
-	"github.com/yourusername/go_ProFiBus/inference"
-	"github.com/yourusername/go_ProFiBus/internal/application/orchestrator"
-	"github.com/yourusername/go_ProFiBus/internal/application/processor"
-	"github.com/yourusername/go_ProFiBus/internal/infrastructure/analyzer"
-	"github.com/yourusername/go_ProFiBus/pkg/interfaces"
+	"go_ProFiBus/fusion"
+	"go_ProFiBus/inference"
+	"go_ProFiBus/internal/application/orchestrator"
+	"go_ProFiBus/internal/application/processor"
+	"go_ProFiBus/internal/infrastructure/analyzer"
+	"go_ProFiBus/pkg/interfaces"
 )
 
 // 本示例展示：AI模型检测 + 多数据源融合的完整工作流

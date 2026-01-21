@@ -6,8 +6,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/yourusername/go_ProFiBus/fusion"
-	"github.com/yourusername/go_ProFiBus/pkg/interfaces"
+	"go_ProFiBus/fusion"
+	"go_ProFiBus/pkg/interfaces"
 )
 
 // FusionProcessor 多数据源融合处理器

@@ -8,8 +8,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/yourusername/go_ProFiBus/inference"
-	"github.com/yourusername/go_ProFiBus/pkg/interfaces"
+	"go_ProFiBus/inference"
+	"go_ProFiBus/pkg/interfaces"
 )
 
 // FeatureExtractor 特征提取处理器

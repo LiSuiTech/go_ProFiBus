@@ -7,7 +7,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
-	"github.com/yourusername/go_profibus/pkg/interfaces"
+	"go_ProFiBus/pkg/interfaces"
 )
 
 // ConfigRepository implements the interfaces.ConfigRepository interface

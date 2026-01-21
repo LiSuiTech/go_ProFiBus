@@ -5,7 +5,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/yourusername/go_profibus/pkg/interfaces"
+	"go_ProFiBus/pkg/interfaces"
 )
 
 // Validator provides configuration validation functionality

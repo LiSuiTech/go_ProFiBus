@@ -21,7 +21,7 @@ type Plugin interface {
 	GetDescription() string
 
 	// GetSchema 获取配置Schema（用于前端渲染表单）
-	GetSchema() *ConfigSchema
+	GetSchema() *PluginConfigSchema
 
 	// Configure 配置插件
 	Configure(config map[string]interface{}) error
@@ -56,11 +56,11 @@ const (
 	PluginTypeSink PluginType = "sink"
 )
 
-// ConfigSchema 配置Schema
+// PluginConfigSchema 插件配置Schema
 // 用于自动生成配置表单
-type ConfigSchema struct {
+type PluginConfigSchema struct {
 	// Properties 配置属性
-	Properties map[string]PropertySchema `json:"properties"`
+	Properties map[string]PluginPropertySchema `json:"properties"`
 
 	// Required 必填字段
 	Required []string `json:"required"`
@@ -72,8 +72,8 @@ type ConfigSchema struct {
 	Description string `json:"description,omitempty"`
 }
 
-// PropertySchema 属性Schema
-type PropertySchema struct {
+// PluginPropertySchema 插件属性Schema
+type PluginPropertySchema struct{
 	// Type 数据类型: string, number, boolean, array, object
 	Type string `json:"type"`
 
@@ -105,10 +105,10 @@ type PropertySchema struct {
 	Pattern string `json:"pattern,omitempty"`
 
 	// Items 数组项Schema（数组类型）
-	Items *PropertySchema `json:"items,omitempty"`
+	Items *PluginPropertySchema `json:"items,omitempty"`
 
 	// Properties 对象属性（对象类型）
-	Properties map[string]PropertySchema `json:"properties,omitempty"`
+	Properties map[string]PluginPropertySchema `json:"properties,omitempty"`
 
 	// Format 格式 (date, time, email, uri, etc.)
 	Format string `json:"format,omitempty"`

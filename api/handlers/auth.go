@@ -6,8 +6,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/yourusername/go_profibus/api/middleware"
-	"github.com/yourusername/go_profibus/pkg/interfaces"
+	"go_ProFiBus/api/middleware"
+	"go_ProFiBus/pkg/interfaces"
 )
 
 // AuthHandler handles authentication-related HTTP requests
