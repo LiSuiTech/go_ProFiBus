@@ -306,3 +306,147 @@ export interface RolesResponse {
   roles: Role[]
   count: number
 }
+
+// ========== Phase 4: Channel Management Types ==========
+
+export type ProtocolType =
+  | 'UART'
+  | 'CAN'
+  | 'USB'
+  | '1-Wire'
+  | 'Modbus'
+  | 'RS-232'
+  | 'RS-485'
+  | 'I2C'
+  | 'SPI'
+
+export type ChannelStatus = 'stopped' | 'running' | 'error'
+
+export type DataType = 'int' | 'float' | 'bool' | 'string' | 'bytes'
+
+export interface ProtocolConfig {
+  // 串口通用配置
+  baud_rate?: number
+  data_bits?: number
+  stop_bits?: number
+  parity?: 'none' | 'odd' | 'even'
+
+  // Modbus 配置
+  slave_id?: number
+  modbus_mode?: 'RTU' | 'TCP'
+
+  // I2C 配置
+  i2c_address?: string
+
+  // 其他配置
+  timeout?: number
+  retry_count?: number
+  poll_interval?: number
+}
+
+export interface Channel {
+  id: string
+  name: string
+  description: string
+  protocol: ProtocolType
+  device_name: string
+  device_port: string
+  status: ChannelStatus
+  config: ProtocolConfig
+  enabled: boolean
+  created_at: string
+  updated_at: string
+  points?: Point[]
+}
+
+export interface Point {
+  id: string
+  channel_id: string
+  name: string
+  description: string
+  address: string
+  data_type: DataType
+  unit: string
+  scale: number
+  offset: number
+  enabled: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface ProtocolInfo {
+  type: ProtocolType
+  name: string
+  description: string
+  config_fields: ConfigField[]
+}
+
+export interface ConfigField {
+  key: string
+  label: string
+  type: 'text' | 'number' | 'select'
+  required: boolean
+  default_value?: any
+  options?: Option[]
+}
+
+export interface Option {
+  label: string
+  value: string
+}
+
+export interface ChannelsResponse {
+  channels: Channel[]
+  total: number
+}
+
+export interface PointsResponse {
+  points: Point[]
+  total: number
+}
+
+export interface ProtocolsResponse {
+  protocols: ProtocolInfo[]
+}
+
+export interface CreateChannelRequest {
+  name: string
+  description?: string
+  protocol: ProtocolType
+  device_name: string
+  device_port: string
+  config: ProtocolConfig
+  enabled?: boolean
+}
+
+export interface UpdateChannelRequest {
+  name?: string
+  description?: string
+  protocol?: ProtocolType
+  device_name?: string
+  device_port?: string
+  config?: ProtocolConfig
+  enabled?: boolean
+}
+
+export interface CreatePointRequest {
+  name: string
+  description?: string
+  address: string
+  data_type: DataType
+  unit?: string
+  scale?: number
+  offset?: number
+  enabled?: boolean
+}
+
+export interface UpdatePointRequest {
+  name?: string
+  description?: string
+  address?: string
+  data_type?: DataType
+  unit?: string
+  scale?: number
+  offset?: number
+  enabled?: boolean
+}
