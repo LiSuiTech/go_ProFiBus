@@ -1,0 +1,40 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: profibus-config
+  namespace: profibus
+  labels:
+    app: profibus
+data:
+  # Application settings
+  GO_ENV: "production"
+  LOG_LEVEL: "info"
+  LOG_FORMAT: "json"
+
+  # Database settings
+  DB_HOST: "postgres-service"
+  DB_PORT: "5432"
+  DB_NAME: "profibus"
+  DB_SSLMODE: "require"
+  DB_MAX_CONNECTIONS: "50"
+  DB_MAX_IDLE_CONNECTIONS: "10"
+
+  # Redis settings
+  REDIS_HOST: "redis-service"
+  REDIS_PORT: "6379"
+  REDIS_DB: "0"
+
+  # API settings
+  API_HOST: "0.0.0.0"
+  API_PORT: "8080"
+  API_MODE: "release"
+  API_CORS_ENABLED: "true"
+  API_CORS_ORIGINS: "*"
+
+  # Metrics settings
+  METRICS_ENABLED: "true"
+  METRICS_PORT: "8081"
+
+  # Auth settings
+  JWT_EXPIRATION: "24h"
+  SESSION_DURATION: "24h"
