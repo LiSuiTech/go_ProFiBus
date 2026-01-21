@@ -135,6 +135,7 @@ docker-compose ps
 docker-compose logs -f profibus
 
 # 4. 访问服务
+# Dashboard: http://localhost:8888 (Vue 3 管理平台) ⭐
 # API: http://localhost:8080
 # Metrics: http://localhost:8081/metrics
 # Prometheus: http://localhost:9090

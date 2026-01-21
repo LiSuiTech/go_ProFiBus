@@ -162,6 +162,29 @@ services:
     networks:
       - profibus-network
 
+  # Vue 3 Dashboard frontend
+  dashboard:
+    build:
+      context: ./web/dashboard
+      dockerfile: Dockerfile
+    container_name: profibus-dashboard
+    restart: unless-stopped
+    ports:
+      - "${DASHBOARD_PORT:-8888}:80"
+    depends_on:
+      - profibus
+    environment:
+      - VITE_API_BASE_URL=${VITE_API_BASE_URL:-http://localhost:8080}
+      - VITE_WS_URL=${VITE_WS_URL:-ws://localhost:8080}
+    networks:
+      - profibus-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:80/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
   # Nginx reverse proxy (optional)
   nginx:
     image: nginx:alpine
@@ -176,6 +199,7 @@ services:
       - nginx_logs:/var/log/nginx
     depends_on:
       - profibus
+      - dashboard
       - grafana
     networks:
       - profibus-network
