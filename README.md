@@ -2,15 +2,24 @@
 
 `go_ProFiBus` 是一个基于 DDD（领域驱动设计）和整洁架构的工业现场总线数据采集、处理和分析系统，专为物联网和工业自动化场景设计。
 
-**当前版本**: Phase 1 重构完成，Phase 2 进行中
+**当前版本**: Phase 4 完成 - 生产就绪 🚀
+
+[![Docker](https://img.shields.io/badge/Docker-Ready-blue)](./Dockerfile)
+[![Kubernetes](https://img.shields.io/badge/Kubernetes-Ready-blue)](./deployments/kubernetes/)
+[![CI/CD](https://img.shields.io/badge/CI%2FCD-GitHub_Actions-green)](/.github/workflows/)
+[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 
 ## 🏗️ 架构亮点
 
 - ✅ **DDD 分层架构** - 清晰的领域层、应用层、基础设施层分离
 - ✅ **接口驱动** - 面向接口编程，易于扩展和测试
 - ✅ **管道模式** - 灵活的数据处理管道（Source → Processors → Analyzers → Sinks）
-- ✅ **实时追踪** - 数据流可视化和性能监控（Phase 2）
+- ✅ **实时追踪** - 数据流可视化和性能监控
 - ✅ **插件系统** - 支持动态加载算法和处理器
+- ✅ **容器化部署** - Docker 多阶段构建，镜像优化至 40MB
+- ✅ **云原生架构** - Kubernetes 部署配置，支持自动扩缩容
+- ✅ **CI/CD 流水线** - GitHub Actions 自动化测试、构建、部署
+- ✅ **生产级监控** - Prometheus + Grafana 完整监控方案
 
 **详细架构文档**: [ARCHITECTURE.md](./ARCHITECTURE.md)
 **Phase 1 总结**: [PHASE1_SUMMARY.md](./PHASE1_SUMMARY.md)
@@ -82,6 +91,27 @@
 
 ## 📦 安装
 
+### 方式 1: Docker Compose（推荐）
+
+```bash
+git clone https://github.com/YouEvanLi/go_ProFiBus.git
+cd go_ProFiBus
+cp .env.example .env  # 配置环境变量
+docker-compose up -d
+```
+
+### 方式 2: Kubernetes
+
+```bash
+# 部署到 Kubernetes 集群
+kubectl apply -f deployments/kubernetes/
+
+# 查看部署状态
+kubectl get pods -n profibus
+```
+
+### 方式 3: 本地开发
+
 确保你已经安装了 Go 1.22 或更高版本。
 
 ```bash
@@ -92,7 +122,51 @@ go mod tidy
 
 ## 🚀 快速开始
 
-### 使用管道处理数据（推荐方式）
+### 使用 Docker Compose（最快方式）
+
+```bash
+# 1. 启动所有服务
+docker-compose up -d
+
+# 2. 查看服务状态
+docker-compose ps
+
+# 3. 查看应用日志
+docker-compose logs -f profibus
+
+# 4. 访问服务
+# API: http://localhost:8080
+# Metrics: http://localhost:8081/metrics
+# Prometheus: http://localhost:9090
+# Grafana: http://localhost:3000 (admin/admin)
+
+# 5. 停止服务
+docker-compose down
+```
+
+### 使用 Kubernetes
+
+```bash
+# 1. 部署应用
+kubectl apply -f deployments/kubernetes/
+
+# 2. 查看 Pod 状态
+kubectl get pods -n profibus
+
+# 3. 查看服务
+kubectl get svc -n profibus
+
+# 4. 端口转发访问服务
+kubectl port-forward -n profibus svc/profibus-service 8080:8080
+
+# 5. 查看日志
+kubectl logs -n profibus -l app=profibus -f
+
+# 6. 水平扩容
+kubectl scale deployment profibus -n profibus --replicas=5
+```
+
+### 使用管道处理数据（代码方式）
 
 ```go
 package main
@@ -562,24 +636,28 @@ Vue 3 Dashboard
 - [x] 适配器模式桥接新旧代码
 - [x] TimescaleDB 时序数据存储
 
-### Phase 2: 数据流可视化 🚧 进行中
+### Phase 2: 数据流可视化 ✅ 已完成
 - [x] Tracer 接口和实现
 - [x] WebSocket 实时推送
 - [x] 追踪数据库设计
-- [ ] Vue 3 可视化 Dashboard
-- [ ] 拓扑图和性能指标展示
+- [x] Vue 3 可视化 Dashboard
+- [x] REST API endpoints
+- [x] 高级可视化组件
 
-### Phase 3: 算法配置系统 📋 计划中
-- [ ] 基于 ConfigSchema 的表单生成
-- [ ] 拖拽式工作流编辑器
-- [ ] Plugin Registry 动态加载
-- [ ] 算法市场
+### Phase 3: 算法配置系统 ✅ 已完成
+- [x] 基于 ConfigSchema 的表单生成
+- [x] 拖拽式工作流编辑器
+- [x] Plugin Registry 动态加载
+- [x] 算法配置 REST API
+- [x] RBAC 权限管理系统
 
-### Phase 4: 容器化部署 📋 计划中
-- [ ] Docker 多阶段构建
-- [ ] docker-compose 编排
-- [ ] Kubernetes 部署配置
-- [ ] CI/CD 流水线
+### Phase 4: 容器化部署 ✅ 已完成
+- [x] Docker 多阶段构建（镜像优化至 40MB）
+- [x] docker-compose 编排（PostgreSQL + Redis + 监控）
+- [x] Kubernetes 部署配置（生产级配置）
+- [x] CI/CD 流水线（GitHub Actions）
+- [x] Prometheus + Grafana 监控
+- [x] 自动化部署和扩缩容
 
 ## 📊 性能指标
 
@@ -609,8 +687,11 @@ A: 实现 `pkg/interfaces.Processor` 接口，无需修改核心代码即可使�
 **Q: 为什么要重构架构？**
 A: 旧架构存在紧耦合、难以测试、扩展困难等问题。新架构基于 DDD 和整洁架构，更易维护和扩展。详见 [ARCHITECTURE.md](./ARCHITECTURE.md)。
 
-**Q: Phase 2 的可视化功能何时完成？**
-A: 后端追踪功能已完成，Vue 3 Dashboard 正在开发中。预计 Phase 2 整体完成时间约 22 小时工作量。
+**Q: 如何部署到生产环境？**
+A: 推荐使用 Kubernetes 部署。详细步骤请参考 [DEPLOYMENT.md](./docs/DEPLOYMENT.md)。支持 Docker Compose 用于开发和小规模部署。
+
+**Q: 如何监控应用性能？**
+A: 系统集成了 Prometheus + Grafana。应用在 8081 端口暴露 `/metrics` endpoint，Prometheus 自动采集指标，Grafana 提供可视化面板。
 
 ---
 
@@ -618,8 +699,14 @@ A: 后端追踪功能已完成，Vue 3 Dashboard 正在开发中。预计 Phase 
 
 ## 📖 更多文档
 
+### 核心文档
 - **[架构文档](./ARCHITECTURE.md)** - 详细的架构设计和迁移指南 ⭐
+- **[部署指南](./docs/DEPLOYMENT.md)** - 完整的部署和运维指南 🚀
+- **[数据库设计](./docs/DATABASE.md)** - TimescaleDB 时序数据库设计
+
+### Phase 实施文档
 - **[Phase 1 总结](./PHASE1_SUMMARY.md)** - Phase 1 重构成果和技术细节
 - **[Phase 2 计划](./PHASE2_PLAN.md)** - Phase 2 数据流可视化实施计划
-- **[数据库设计](./docs/DATABASE.md)** - TimescaleDB 时序数据库设计
+- **[Phase 3 实施](./docs/PHASE3_IMPLEMENTATION.md)** - 算法配置系统和 RBAC 实施详情
+- **[Phase 4 容器化](./docs/PHASE4_CONTAINERIZATION.md)** - 容器化和部署完整实施方案
 
