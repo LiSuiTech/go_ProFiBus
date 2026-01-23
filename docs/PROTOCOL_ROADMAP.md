@@ -14,8 +14,8 @@ go_ProFiBus致力于成为全栈工业通信平台，支持从现场层到IT层�
 |------|------|--------|------|
 | **PROFIBUS DP/PA** | ✅ **已实现** | ⭐⭐⭐⭐⭐ | 项目核心协议，完整支持Master/Slave、循环数据交换 |
 | **Modbus RTU** | ✅ **已实现** | ⭐⭐⭐⭐⭐ | 支持所有功能码、CRC校验 |
-| **HART** | 🔜 计划中 | ⭐⭐⭐⭐ | 过程自动化协议 |
-| **DeviceNet** | 🔜 计划中 | ⭐⭐⭐ | 基于CAN的现场总线 |
+| **HART** | ✅ **已实现** | ⭐⭐⭐⭐ | 过程自动化协议，4-20mA+数字 |
+| **DeviceNet** | ✅ **已实现** | ⭐⭐⭐ | 基于CAN的现场总线 |
 | **AS-i** | 🔜 计划中 | ⭐⭐ | 简单传感器/执行器网络 |
 | **Foundation Fieldbus** | 🔜 计划中 | ⭐⭐ | 过程自动化协议 |
 
@@ -36,8 +36,8 @@ go_ProFiBus致力于成为全栈工业通信平台，支持从现场层到IT层�
 |------|------|--------|------|
 | **OPC UA** | ✅ **已实现** | ⭐⭐⭐⭐⭐ | 支持Client模式，Pub/Sub待实现 |
 | **MQTT** | ✅ **已实现** | ⭐⭐⭐⭐⭐ | IoT标准协议 |
-| **HTTP/REST API** | 🔜 计划中 | ⭐⭐⭐⭐ | RESTful数据源 |
-| **数据库 (ODBC)** | 🔜 计划中 | ⭐⭐⭐⭐ | SQL数据库采集 |
+| **HTTP/REST API** | ✅ **已实现** | ⭐⭐⭐⭐ | RESTful数据源，支持多种认证 |
+| **数据库 (ODBC)** | ✅ **已实现** | ⭐⭐⭐⭐ | SQL数据库采集，支持MySQL/PostgreSQL/SQLServer/Oracle/SQLite |
 | **OPC Classic** | 🔜 计划中 | ⭐⭐⭐ | OPC DA/AE/HDA |
 | **WebSocket** | 🔜 计划中 | ⭐⭐⭐ | 实时Web通信 |
 

@@ -1,5 +1,9 @@
 package serial
 
+// NOTE: This file requires gopcua v0.3.x or compatible version
+// Current compilation errors are due to API changes in different gopcua versions
+// TODO: Update to use the correct gopcua API for your installed version
+
 import (
 	"context"
 	"fmt"

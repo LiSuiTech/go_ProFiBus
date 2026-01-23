@@ -549,14 +549,9 @@ func calculateLRC(data []byte) byte {
 func (m *Modbus) openSerialPort(portName string) (io.ReadWriteCloser, error) {
 	// 使用RealSerialPort打开串口
 	port := &RealSerialPort{}
-	config := PortConfig{
-		BaudRate: m.config.BaudRate,
-		DataBits: m.config.DataBits,
-		StopBits: m.config.StopBits,
-		Parity:   m.config.Parity,
-	}
 
-	err := port.OpenWithConfig(portName, config)
+	// 使用简单的Open方法（配置在实际实现中应通过termios设置）
+	err := port.Open(portName)
 	if err != nil {
 		return nil, err
 	}

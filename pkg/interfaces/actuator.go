@@ -269,8 +269,8 @@ type RuleCondition struct {
 	CustomEvaluator func(AnalysisResult) bool
 }
 
-// Permission 权限定义
-type Permission struct {
+// ControlPermission 设备控制权限定义
+type ControlPermission struct {
 	// Action 允许的动作类型
 	Action ActionType
 
@@ -299,11 +299,11 @@ type AuthorizationManager interface {
 	CheckPermission(userID string, action *ControlAction) (bool, error)
 
 	// GrantPermission 授予权限
-	GrantPermission(userID string, permission *Permission) error
+	GrantPermission(userID string, permission *ControlPermission) error
 
 	// RevokePermission 撤销权限
 	RevokePermission(userID string, action ActionType) error
 
 	// GetPermissions 获取用户权限
-	GetPermissions(userID string) ([]*Permission, error)
+	GetPermissions(userID string) ([]*ControlPermission, error)
 }
