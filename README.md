@@ -260,146 +260,24 @@ go_ProFiBus/
 │   └── tracer.go                # 追踪器
 │
 ├── internal/                    # 内部实现（新架构）
-│   ├── domain/                  # 领域层 - 业务实体
-│   ├── application/             # 应用层 - 业务逻辑编排
-│   │   └── orchestrator/        # 管道编排器 ⭐
-│   ├── infrastructure/          # 基础设施层 - 适配器
-│   └── interfaces/              # 外部接口 - WebSocket等
-│
-├── [Legacy - 兼容旧代码]         # ⚠️ 已弃用，仅用于向后兼容
-│   ├── collector/               # → 使用 pkg/interfaces
-│   ├── anomaly/                 # → 使用 internal/domain/rule
-│   ├── event/                   # → 使用 internal/domain/event
-│   ├── fusion/                  # → 使用 orchestrator
-│   └── inference/               # → 使用 plugin 系统
+│   ├── domain/                  # 领域层 - 业务实体（设备、告警、预测、控制、数据管理等）
+│   ├── application/             # 应用层 - 业务编排（Workflow、训练任务、数据清洗/归档等）
+│   ├── infrastructure/          # 基础设施层 - 存储、外设、第三方集成
+│   └── interfaces/              # 外部接口 - REST API、WebSocket 等
 │
 ├── [基础设施和工具]
-│   ├── serial/                  # 串口协议实现
+│   ├── serial/                  # 串口及工业协议实现
 │   ├── logger/                  # 日志系统
 │   ├── errors/                  # 错误处理
 │   ├── config/                  # 配置管理
-│   ├── storage/                 # 数据存储
-│   ├── api/                     # REST API
-│   └── examples/                # 使用示例
+│   ├── storage/                 # 数据存储（PostgreSQL / TimescaleDB 等）
+│   ├── api/                     # REST API Server
+│   └── examples/                # 使用示例（设备控制、Workflow 等）
 │
 ├── ARCHITECTURE.md              # 架构文档 ⭐
 ├── PHASE1_SUMMARY.md            # Phase 1 总结
 ├── PHASE2_PLAN.md               # Phase 2 计划
 └── README.md                    # 项目文档
-```
-
-**⚠️ 重要提示**: 根目录下的 `collector/`, `anomaly/`, `event/`, `fusion/`, `inference/` 等包已被标记为 **Deprecated**。新代码请使用 `internal/` 和 `pkg/interfaces/` 下的新架构。详见 [ARCHITECTURE.md](./ARCHITECTURE.md)。
-
-## ⚙️ 配置文件
-
-项目支持 YAML 格式的配置文件。示例配置 `config.yaml`:
-
-```yaml
-system:
-  name: "go_ProFiBus"
-  version: "1.0.0"
-  environment: "dev"
-  debug: true
-
-logging:
-  level: "INFO"
-  enable_file: true
-  file_path: "logs/profibus.log"
-
-protocols:
-  - id: "rs485_main"
-    type: "RS485"
-    port: "/dev/ttyUSB0"
-    baud_rate: 115200
-    enabled: true
-
-collector:
-  buffer_size: 1000
-  default_sample_rate: "100ms"
-  enable_cache: true
-
-fusion:
-  strategy: "weighted"
-  time_window: "1s"
-
-multimodal:
-  alignment: "linear_interp"
-  analyze_interval: "1s"
-```
-
-## 🧪 运行测试
-
-```bash
-# 运行所有测试
-go test ./...
-
-# 运行特定包的测试
-go test ./logger
-go test ./errors
-
-# 运行测试并查看覆盖率
-go test -cover ./...
-```
-
-## 📚 示例程序
-
-### Pipeline 示例（推荐）
-
-```bash
-cd examples/pipeline
-go run main.go
-```
-
-### 并发采集示例
-
-```bash
-cd examples/concurrent_collection
-go run main.go
-```
-
-### WebSocket 追踪示例（Phase 2）
-
-```bash
-cd examples/rest_api
-go run websocket_trace_example.go
-```
-
-## 🔧 配置选项
-
-### 串口配置
-
-可以通过以下选项配置串口参数：
-
-```go
-import "go_ProFiBus/serial"
-
-// 设置波特率
-serial.WithBaudRate(115200)
-
-// 设置数据位
-serial.WithDataBits(8)
-
-// 设置校验位
-serial.WithParity(serial.ParityNone)  // None/Odd/Even
-
-// 设置停止位
-serial.WithStopBits(1)
-
-// 设置 I2C 地址
-serial.WithAddress(0x48)
-```
-
-### 日志配置
-
-```go
-import "go_ProFiBus/logger"
-
-// 设置日志级别
-logger.SetLevel(logger.INFO)
-
-// 启用文件日志
-log := logger.GetLogger()
-log.EnableFileLog("app.log")
 ```
 
 ## 🏗️ 架构设计
@@ -409,19 +287,16 @@ log.EnableFileLog("app.log")
 ```
 ┌─────────────────────────────────────────┐
 │      Interface Layer (pkg/interfaces)   │  接口定义层
-│    (DataSource, Processor, Analyzer)    │
+│    (DataSource, Analyzer, Actuator…)    │
 ├─────────────────────────────────────────┤
 │      Application Layer (internal/app)   │  应用层
-│    (Pipeline, Orchestrator, Builder)    │  业务逻辑编排
+│    (Workflow, Training, DataMgmt…)     │  业务逻辑编排
 ├─────────────────────────────────────────┤
 │      Domain Layer (internal/domain)     │  领域层
-│    (DataSample, Event, Rule)            │  业务实体
+│    (Device, Alert, Prediction…)         │  业务实体
 ├─────────────────────────────────────────┤
 │  Infrastructure Layer (internal/infra)  │  基础设施层
-│  (Adapters, Repository, WebSocket)      │  技术实现
-├─────────────────────────────────────────┤
-│      [Legacy Packages - Deprecated]     │  旧代码（向后兼容）
-│    (collector, anomaly, event, etc.)    │
+│  (Storage, Protocols, WebSocket…)       │  技术实现
 └─────────────────────────────────────────┘
 ```
 
@@ -484,60 +359,6 @@ Vue 3 Dashboard
 - 作者: lixiaolong
 - 项目链接: [https://github.com/YouEvanLi/go_ProFiBus](https://github.com/YouEvanLi/go_ProFiBus)
 
-## 🗺️ 路线图
-
-### Phase 1: 核心架构重构 ✅ 已完成
-- [x] DDD 分层架构设计
-- [x] 接口抽象层（pkg/interfaces）
-- [x] Pipeline 数据处理框架
-- [x] 适配器模式桥接新旧代码
-- [x] TimescaleDB 时序数据存储
-
-### Phase 2: 数据流可视化 ✅ 已完成
-- [x] Tracer 接口和实现
-- [x] WebSocket 实时推送
-- [x] 追踪数据库设计
-- [x] Vue 3 可视化 Dashboard
-- [x] REST API endpoints
-- [x] 高级可视化组件
-  - D3.js 拓扑图
-  - ECharts 性能图表
-  - 实时追踪时间线
-
-### Phase 3: 算法配置系统 ✅ 已完成
-- [x] 基于 ConfigSchema 的表单生成
-- [x] 拖拽式工作流编辑器
-- [x] Plugin Registry 动态加载
-- [x] 算法配置 REST API
-- [x] RBAC 权限管理系统
-  - 用户管理
-  - 角色管理
-  - 权限控制
-  - JWT 认证
-- [x] 配置版本管理和审计
-- [x] 配置热重载机制
-
-### Phase 4: 容器化部署 ✅ 已完成
-- [x] Docker 多阶段构建（镜像优化至 40MB）
-- [x] docker-compose 编排（PostgreSQL + Redis + 监控）
-- [x] Kubernetes 部署配置（生产级配置）
-  - StatefulSet（数据库）
-  - Deployment（应用）
-  - HPA（自动扩缩容）
-  - Ingress（外部访问）
-- [x] CI/CD 流水线（GitHub Actions）
-  - 自动化测试
-  - 安全扫描（Trivy + gosec）
-  - 多平台构建（amd64 + arm64）
-  - 自动部署（Staging + Production）
-- [x] Prometheus + Grafana 监控
-- [x] Vue 3 Dashboard 容器化
-- [x] 采集通道管理功能（Web UI + Backend）
-  - 9 种工业协议支持
-  - 点位配置和映射
-  - 配置热重载
-  - 实时状态监控
-
 ## 🎨 Web Dashboard 功能模块
 
 ### 当前支持的功能页面
@@ -577,7 +398,7 @@ Vue 3 Dashboard
 - 单通道采样率可达 10kHz
 - 数据融合延迟 < 10ms
 - 模型推理时间 < 5ms (CPU)
-- Docker 镜像大小：40MB（优化 95%）
+- Docker 镜像大小：约 40MB
 - 启动时间：< 5 秒
 
 ## ⚠️ 注意事项
@@ -589,71 +410,20 @@ Vue 3 Dashboard
 
 ## 🔍 常见问题
 
-**Q: 新旧架构如何选择？**
-A: 新代码必须使用 `pkg/interfaces` 和 `internal/` 下的新架构。旧包（collector, anomaly, event等）已标记为 Deprecated，仅用于向后兼容。
-
-**Q: 如何添加自定义数据源？**
-A: 实现 `pkg/interfaces.DataSource` 接口，然后通过 PipelineBuilder 集成到管道中。参考 `internal/infrastructure/collector/datasource_adapter.go`。
-
-**Q: 如何添加自定义处理器？**
-A: 实现 `pkg/interfaces.Processor` 接口，无需修改核心代码即可使用。
-
-**Q: 为什么要重构架构？**
-A: 旧架构存在紧耦合、难以测试、扩展困难等问题。新架构基于 DDD 和整洁架构，更易维护和扩展。详见 [ARCHITECTURE.md](./ARCHITECTURE.md)。
-
-**Q: 如何部署到生产环境？**
+**Q: 如何部署到生产环境？**  
 A: 推荐使用 Kubernetes 部署。详细步骤请参考 [DEPLOYMENT.md](./docs/DEPLOYMENT.md)。支持 Docker Compose 用于开发和小规模部署。
 
-**Q: 如何监控应用性能？**
+**Q: 如何监控应用性能？**  
 A: 系统集成了 Prometheus + Grafana。应用在 8081 端口暴露 `/metrics` endpoint，Prometheus 自动采集指标，Grafana 提供可视化面板。
 
-**Q: 如何配置采集通道？**
-A: 访问 Dashboard 的"采集通道"页面，可以通过 Web 界面配置设备、选择协议、设置点位。支持 9 种工业通信协议，配置后可实时生效。详见 [采集通道集成指南](./docs/CHANNEL_INTEGRATION_GUIDE.md)。
+**Q: 如何配置采集通道？**  
+A: 访问 Dashboard 的「采集通道」页面，可以通过 Web 界面配置设备、选择协议、设置点位。支持多种工业通信协议，配置后可实时生效。详见 [采集通道集成指南](./docs/CHANNEL_INTEGRATION_GUIDE.md)。
 
-**Q: 配置修改后如何生效？**
-A: 系统支持配置热重载。通过 Web UI 修改配置后，会通过 Redis Pub/Sub 或定时轮询通知采集器，采集器自动重载配置，无需重启服务。详见 [技术实现细节](./docs/TECHNICAL_FLOW_DETAILS.md)。
-
-**Q: 如何查看系统业务流程？**
+**Q: 如何查看系统业务流程？**  
 A: 请参考 [业务流程说明](./docs/BUSINESS_FLOW.md)，包含完整的配置流程、数据接入与解析、算法计算等详细说明。
 
 ---
 
 **如果这个项目对你有帮助，请给个 ⭐ Star！**
 
-## 📖 更多文档
-
-### 🎯 核心文档
-- **[架构文档](./ARCHITECTURE.md)** - 详细的架构设计和迁移指南 ⭐
-- **[业务流程说明](./docs/BUSINESS_FLOW.md)** - 完整业务逻辑和数据流程 📊
-- **[技术实现细节](./docs/TECHNICAL_FLOW_DETAILS.md)** - 配置监听、数据解析、算法计算 🔧
-- **[部署指南](./docs/DEPLOYMENT.md)** - 完整的部署和运维指南 🚀
-- **[数据库设计](./docs/DATABASE.md)** - TimescaleDB 时序数据库设计
-
-### 📋 Phase 实施文档
-- **[Phase 1 总结](./PHASE1_SUMMARY.md)** - Phase 1 重构成果和技术细节
-- **[Phase 2 计划](./PHASE2_PLAN.md)** - Phase 2 数据流可视化实施计划
-- **[Phase 3 实施](./docs/PHASE3_IMPLEMENTATION.md)** - 算法配置系统和 RBAC 实施详情
-- **[Phase 4 容器化](./docs/PHASE4_CONTAINERIZATION.md)** - 容器化和部署完整实施方案
-
-### 🔌 功能集成文档
-- **[采集通道集成指南](./docs/CHANNEL_INTEGRATION_GUIDE.md)** - 采集通道管理功能集成步骤 ⭐
-
-### 📚 推荐阅读顺序
-
-**新手入门**：
-1. README.md（本文档）
-2. ARCHITECTURE.md（了解架构）
-3. 快速开始（Docker Compose 部署）
-4. BUSINESS_FLOW.md（理解业务流程）
-
-**开发者**：
-1. ARCHITECTURE.md（架构设计）
-2. TECHNICAL_FLOW_DETAILS.md（技术实现）
-3. CHANNEL_INTEGRATION_GUIDE.md（功能集成）
-4. Phase 实施文档（历史演进）
-
-**运维人员**：
-1. DEPLOYMENT.md（部署指南）
-2. BUSINESS_FLOW.md（系统配置）
-3. DATABASE.md（数据库管理）
 
