@@ -11,6 +11,9 @@ import Control from '../views/Control.vue'
 import DataManagement from '../views/DataManagement.vue'
 import WorkflowEditor from '../views/WorkflowEditor.vue'
 import RealtimeDataStream from '../views/RealtimeDataStream.vue'
+import UserManagement from '../views/UserManagement.vue'
+import RoleManagement from '../views/RoleManagement.vue'
+import PermissionManagement from '../views/PermissionManagement.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -64,6 +67,21 @@ const router = createRouter({
       path: '/data-management',
       name: 'data-management',
       component: DataManagement,
+    },
+    {
+      path: '/users',
+      name: 'users',
+      component: UserManagement,
+    },
+    {
+      path: '/roles',
+      name: 'roles',
+      component: RoleManagement,
+    },
+    {
+      path: '/permissions',
+      name: 'permissions',
+      component: PermissionManagement,
     },
     {
       path: '/workflow-editor',
