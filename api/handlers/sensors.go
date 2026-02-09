@@ -1,7 +1,7 @@
 package handlers
 
 import (
-	"go_ProFiBus/collector"
+	"go_ProFiBus/internal/domain/datasample"
 	"go_ProFiBus/storage"
 	"net/http"
 	"strconv"
@@ -32,7 +32,7 @@ type GetSensorReadingsRequest struct {
 
 // PostSensorReadingsRequest 批量写入传感器读数请求
 type PostSensorReadingsRequest struct {
-	Readings []*collector.DataSample `json:"readings" binding:"required,dive"`
+	Readings []map[string]interface{} `json:"readings" binding:"required,dive"`
 }
 
 // AggregationRequest 传感器数据聚合请求

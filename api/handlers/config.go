@@ -92,7 +92,12 @@ func (h *ConfigHandler) ListRuleConfigs(c *gin.Context) {
 		enabled = &enabledVal
 	}
 
-	ruleConfigs, err := h.repository.ListRuleConfigs(c.Request.Context(), enabled)
+	var ruleType *string
+	if typeStr := c.Query("type"); typeStr != "" {
+		ruleType = &typeStr
+	}
+
+	ruleConfigs, err := h.repository.ListRuleConfigs(c.Request.Context(), enabled, ruleType)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to list rule configs: " + err.Error()})
 		return

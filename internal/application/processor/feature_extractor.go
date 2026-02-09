@@ -242,7 +242,7 @@ func (fe *FeatureExtractor) Process(ctx context.Context, input interfaces.DataSa
 }
 
 // extractFeatures 提取特征向量
-func (fe *FeatureExtractor) extractFeatures(sample interfaces.DataSample) (*inference.Tensor, error) {
+func (fe *FeatureExtractor) extractFeatures(sample interfaces.DataSample) (*interfaces.Tensor, error) {
 	fe.mu.RLock()
 	defer fe.mu.RUnlock()
 
@@ -264,7 +264,7 @@ func (fe *FeatureExtractor) extractFeatures(sample interfaces.DataSample) (*infe
 	}
 
 	// 创建张量
-	tensor := &inference.Tensor{
+	tensor := &interfaces.Tensor{
 		Shape: []int{len(features)},
 		Data:  features,
 	}
@@ -490,7 +490,7 @@ func calculateTrend(values []float64) float64 {
 }
 
 // ExtractFeaturesFromSample 从样本中提取特征的便捷函数
-func ExtractFeaturesFromSample(sample interfaces.DataSample) (*inference.Tensor, error) {
+func ExtractFeaturesFromSample(sample interfaces.DataSample) (*interfaces.Tensor, error) {
 	extractor := NewFeatureExtractor("default")
 
 	// 添加所有预定义特征
@@ -509,7 +509,7 @@ func ExtractFeaturesFromSample(sample interfaces.DataSample) (*inference.Tensor,
 }
 
 // NormalizeFeatures 归一化特征向量（Min-Max归一化到0-1）
-func NormalizeFeatures(features *inference.Tensor) *inference.Tensor {
+func NormalizeFeatures(features *interfaces.Tensor) *interfaces.Tensor {
 	if len(features.Data) == 0 {
 		return features
 	}
@@ -529,14 +529,14 @@ func NormalizeFeatures(features *inference.Tensor) *inference.Tensor {
 		normalized[i] = (v - min) / (max - min)
 	}
 
-	return &inference.Tensor{
+	return &interfaces.Tensor{
 		Shape: features.Shape,
 		Data:  normalized,
 	}
 }
 
 // StandardizeFeatures 标准化特征向量（Z-score标准化）
-func StandardizeFeatures(features *inference.Tensor) *inference.Tensor {
+func StandardizeFeatures(features *interfaces.Tensor) *interfaces.Tensor {
 	if len(features.Data) == 0 {
 		return features
 	}
@@ -556,7 +556,7 @@ func StandardizeFeatures(features *inference.Tensor) *inference.Tensor {
 		standardized[i] = (v - mean) / stdDev
 	}
 
-	return &inference.Tensor{
+	return &interfaces.Tensor{
 		Shape: features.Shape,
 		Data:  standardized,
 	}

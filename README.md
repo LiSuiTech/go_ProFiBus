@@ -11,97 +11,96 @@
 
 ## 🏗️ 架构亮点
 
-- ✅ **DDD 分层架构** - 清晰的领域层、应用层、基础设施层分离
-- ✅ **接口驱动** - 面向接口编程，易于扩展和测试
-- ✅ **管道模式** - 灵活的数据处理管道（Source → Processors → Analyzers → Sinks）
-- ✅ **实时追踪** - 数据流可视化和性能监控
-- ✅ **插件系统** - 支持动态加载算法和处理器
-- ✅ **容器化部署** - Docker 多阶段构建，镜像优化至 40MB
-- ✅ **云原生架构** - Kubernetes 部署配置，支持自动扩缩容
-- ✅ **CI/CD 流水线** - GitHub Actions 自动化测试、构建、部署
-- ✅ **生产级监控** - Prometheus + Grafana 完整监控方案
+- ✅ **DDD 分层 + 整洁架构**：`domain / application / infrastructure / interfaces` 清晰分层
+- ✅ **工业设备一站式平台**：设备管理、告警中心、预测分析、数据管理、反向控制、工作流统一在一个系统中
+- ✅ **Workflow 引擎（DAG）**：类似 Dify 的可视化工作流，支持设备数据源、告警输出、设备控制等节点
+- ✅ **通用数据融合**：支持单设备多维度、单设备单点、多设备多源的灵活数据融合配置
+- ✅ **ML 模型插件系统**：统一的模型加载 / 推理接口，支持多种模型类型与 JSON 模型文件
+- ✅ **模型训练接口**：后端提供训练任务管理与模拟训练流程，便于后续接入真实训练框架
+- ✅ **通用规则引擎**：规则模板库 + 规则测试（Dry Run），支持快速创建和验证告警 / 控制规则
+- ✅ **数据管理中心**：数据清洗、归档策略、生命周期管理一体化
+- ✅ **实时数据流 & 大屏**：WebSocket 推送设备数据，前端多维度实时曲线和统计
+- ✅ **容器化 + 监控 + CI/CD**：Docker / Kubernetes 部署，Prometheus + Grafana 监控，GitHub Actions 流水线
 
-**详细架构文档**: [ARCHITECTURE.md](./ARCHITECTURE.md)
-**Phase 1 总结**: [PHASE1_SUMMARY.md](./PHASE1_SUMMARY.md)
-**Phase 2 计划**: [PHASE2_PLAN.md](./PHASE2_PLAN.md)
 
-## ✨ 核心特性
+## ✨ 核心功能模块
 
-### 🔌 多协议支持
-支持 9 种主流工业通信协议：
-- **UART** - 通用异步收发器
-- **CAN** - 控制器局域网络
-- **USB** - 通用串行总线
-- **1-Wire** - 单线通信协议
-- **Modbus** - 工业通信协议
-- **RS-232** - 串行通信标准
-- **RS-485** - 差分串行接口
-- **I2C** - 互连集成电路
-- **SPI** - 串行外设接口
+### 1. 设备与通道管理
+- 设备管理：设备信息、状态、健康度、位置（区域 / 产线 / 车间）管理
+- 设备通道：设备与采集通道映射，支持多种协议（UART / CAN / USB / Modbus / RS-232 / RS-485 / I2C / SPI / 1-Wire）
+- 设备数据字段 & 数据源：为每个设备配置结构化字段和数据来源
+- Web 管理界面：设备列表、详情、状态、健康度可视化
 
-### 📊 数据采集与通道管理
-- **Web 界面管理** - 通过 Dashboard 可视化配置采集通道
-- **9 种协议支持** - UART、CAN、USB、Modbus、RS-485、RS-232、I2C、SPI、1-Wire
-- **点位配置** - 灵活配置采集点位、地址映射、缩放系数
-- **多源并发采集** - 支持 100+ 并发数据源
-- **可配置采样率** - 自定义采样频率和缓冲区
-- **自动重试机制** - 连接失败自动重试
-- **数据质量评估** - 实时质量检查和异常标记
-- **配置热重载** - 运行时修改配置，无需重启
+### 2. 设备布局可视化
+- 通过 Vue + SVG / D3.js 展示设备在厂区 / 产线上的拓扑布局
+- 支持根据设备状态上色、显示运行 / 故障 / 维护等状态
+- 可作为实时监控大屏的基础组件
 
-### 🔀 数据融合
-支持多种融合策略：
-- 平均融合
-- 加权融合
-- 卡尔曼滤波
-- 移动平均
-- 指数移动平均
+### 3. 告警中心 & 通用规则引擎
+- 告警管理：告警规则、告警记录、统计视图（按级别 / 状态）
+- 告警规则：基于 JSON 条件的规则定义，支持冷却时间、最大执行次数等
+- **规则模板库**：
+  - 阈值规则、异常检测、趋势分析、复合条件、变化率等模板
+  - 可视化变量配置（字段名、阈值、方法等）
+  - 一键从模板创建告警规则
+- **规则测试（Dry Run）**：
+  - 提交样例数据，实时评估规则是否触发
+  - 返回触发状态、Z 分数、趋势值等诊断信息
 
-时序数据处理：
-- 时间同步
-- 线性插值
-- 异常值检测
+### 4. 预测分析 & ML 模型
+- 预测结果管理：预测任务、结果历史、可视化图表
+- 模型管理：创建 / 更新 / 删除 / 部署预测模型，上传模型文件
+- **ML 模型插件系统**（后端）：
+  - 支持线性回归、神经网络、SVM、决策树、LSTM 等多类型模型
+  - 使用 JSON 文件描述模型参数与结构，统一加载与推理流程
+- **模型训练接口**：
+  - 训练任务：任务状态、进度、历史记录
+  - 后端目前提供「模拟训练」流程，方便日后接入实际 ML 平台
 
-### 🧠 模型推理
-- 线性回归模型
-- 神经网络模型
-- 自定义模型支持
-- 批量推理
-- 数据预处理管道
+### 5. 通用数据融合系统
+- 支持多种数据来源：
+  - 单设备多维度（如：温度 / 振动 / 转速）
+  - 单设备单点
+  - 多设备、多通道
+- 可配置融合策略与权重，结果可在 Workflow、告警 / 预测等模块中复用
+- 与实时数据流打通，可在前端直接看到融合后曲线
 
-### 🎭 多模态融合分析
-支持多种模态数据：
-- 时序数据
-- 传感器数据
-- 图像数据
-- 音频数据
-- 文本数据
-- 视频数据
-- 事件数据
+### 6. 数据管理中心
+- **数据清洗**：
+  - 去重、异常值过滤、缺失值填充、标准化、平滑处理、数据验证
+  - 基于规则配置的通用清洗引擎
+  - 前端提供「清洗预览（Dry Run）」视图：单条样例数据清洗前后对比
+- **归档策略**：
+  - 按数据源类型 / ID 配置归档策略
+  - 保留天数 / 归档天数 / 压缩开关 / 执行间隔
+  - 归档记录与统计视图
+- **生命周期管理**：
+  - 热 / 温 / 冷存储天数配置
+  - 删除 / 压缩阈值
+  - 判断某条数据应该处于哪种存储层级
 
-特性：
-- 多模态数据对齐
-- 特征提取
-- 跨模态融合
-- 流式分析
+### 7. 设备反向控制
+- 控制策略：基于条件和动作定义设备控制逻辑
+- 控制权限 / 审核 / 审计：谁在什么时候对哪台设备做了什么操作
+- 与 Workflow、告警、预测模块联动，可实现「检测 → 决策 → 控制」闭环
 
-### 🎨 Web 管理界面
-- **Vue 3 Dashboard** - 现代化的 SPA 管理平台
-- **实时监控** - WebSocket 实时推送数据和事件
-- **Pipeline 管理** - 可视化 Pipeline 拓扑和性能
-- **采集通道管理** - 配置设备、协议、点位
-- **追踪时间线** - 完整的数据流追踪记录
-- **算法配置** - 动态配置检测规则和分析器
-- **用户权限管理** - RBAC 基于角色的访问控制
+### 8. Workflow 工作流引擎
+- DAG 工作流：节点 + 边 + 变量的图结构
+- 核心节点：
+  - 设备数据源（Device Source）
+  - 规则检测 / ML 分析
+  - 条件分支 / 变量设置
+  - 告警输出、设备控制
+- 多输入 / 多输出参数映射：前端可视化配置边上的 `param_mapping`
+- 工作流模板库：预置常用监控 / 控制 / 数据处理流程，一键生成工作流
 
-### 🛠️ 其他特性
-- 统一的接口设计
-- YAML 配置文件支持
-- 完善的错误处理
-- 结构化日志系统
-- 线程安全设计
-- RESTful API 设计
-- Swagger/OpenAPI 文档
+### 9. 实时数据流 & Web Dashboard
+- WebSocket 通道：`/ws/data` 实时推送设备 / 融合数据
+- 前端「实时数据流」页面：
+  - 设备 / 字段过滤
+  - 多条曲线实时刷新
+  - 质量指标 / 数据量统计
+- Vue 3 + Element Plus + ECharts 构建的管理控制台
 
 ## 📦 安装
 
@@ -247,230 +246,6 @@ kubectl logs -n profibus -l app=profibus -f
 # 6. 水平扩容
 kubectl scale deployment profibus -n profibus --replicas=5
 ```
-
-### 使用管道处理数据（代码方式）
-
-```go
-package main
-
-import (
-    "context"
-    "go_ProFiBus/collector"
-    "go_ProFiBus/internal/application/orchestrator"
-    infracollector "go_ProFiBus/internal/infrastructure/collector"
-    infraanalyzer "go_ProFiBus/internal/infrastructure/analyzer"
-    "go_ProFiBus/anomaly"
-    "log"
-)
-
-func main() {
-    ctx := context.Background()
-
-    // 1. 创建数据源（使用适配器包装现有 Collector）
-    collectorInstance := collector.NewCollector(config)
-    dataSource := infracollector.NewDataSourceAdapter(
-        "sensor-001",
-        "温度传感器",
-        collectorInstance,
-    )
-
-    // 2. 创建分析器（异常检测）
-    ruleEngine := anomaly.NewRuleEngine()
-    tempRule := anomaly.NewThresholdRule(
-        "temp_high",
-        "温度过高",
-        "temperature",
-        ">",
-        80.0,
-        anomaly.SeverityWarning,
-    )
-    ruleEngine.AddRule(tempRule)
-    analyzer := infraanalyzer.NewRuleEngineAnalyzer("rule-engine", ruleEngine)
-
-    // 3. 创建输出（可选：添加数据库存储等）
-    sink := NewConsoleSink() // 自定义实现
-
-    // 4. 构建管道
-    pipeline, err := orchestrator.NewPipelineBuilder("main-pipeline").
-        WithSource(dataSource).
-        WithAnalyzer(analyzer).
-        WithSink(sink).
-        Build()
-
-    if err != nil {
-        log.Fatalf("构建管道失败: %v", err)
-    }
-
-    // 5. 启动管道
-    if err := pipeline.Start(ctx); err != nil {
-        log.Fatalf("启动管道失败: %v", err)
-    }
-    defer pipeline.Stop()
-
-    log.Println("管道运行中...")
-    select {} // 保持运行
-}
-```
-
-### 实现自定义处理器
-
-```go
-package main
-
-import (
-    "context"
-    "go_ProFiBus/pkg/interfaces"
-)
-
-// 自定义温度转换处理器
-type TemperatureConverter struct {
-    name string
-}
-
-func NewTemperatureConverter() *TemperatureConverter {
-    return &TemperatureConverter{name: "temp-converter"}
-}
-
-// 实现 Processor 接口
-func (p *TemperatureConverter) Process(ctx context.Context, input interfaces.DataSample) (interfaces.DataSample, error) {
-    data := input.GetData()
-
-    // 将华氏度转换为摄氏度
-    if tempF, ok := data["temperature_f"].(float64); ok {
-        tempC := (tempF - 32) * 5 / 9
-        data["temperature_c"] = tempC
-    }
-
-    return input, nil
-}
-
-func (p *TemperatureConverter) GetName() string {
-    return p.name
-}
-
-func (p *TemperatureConverter) GetConfig() interfaces.ProcessorConfig {
-    return nil
-}
-
-func (p *TemperatureConverter) Initialize(config interfaces.ProcessorConfig) error {
-    return nil
-}
-
-func (p *TemperatureConverter) Close() error {
-    return nil
-}
-
-// 在管道中使用
-func main() {
-    pipeline := orchestrator.NewPipelineBuilder("my-pipeline").
-        WithSource(dataSource).
-        WithProcessor(NewTemperatureConverter()). // 添加自定义处理器
-        WithAnalyzer(analyzer).
-        Build()
-}
-```
-
-### 使用多管道编排器
-
-```go
-package main
-
-import (
-    "context"
-    "go_ProFiBus/internal/application/orchestrator"
-    "log"
-)
-
-func main() {
-    ctx := context.Background()
-
-    // 创建编排器
-    orch := orchestrator.NewOrchestrator()
-
-    // 添加多个管道
-    pipeline1, _ := orchestrator.NewPipelineBuilder("sensor-pipeline-1").
-        WithSource(sensor1Source).
-        WithAnalyzer(analyzer1).
-        Build()
-
-    pipeline2, _ := orchestrator.NewPipelineBuilder("sensor-pipeline-2").
-        WithSource(sensor2Source).
-        WithAnalyzer(analyzer2).
-        Build()
-
-    orch.AddPipeline(pipeline1)
-    orch.AddPipeline(pipeline2)
-
-    // 启动所有管道
-    if err := orch.StartAll(ctx); err != nil {
-        log.Fatalf("启动失败: %v", err)
-    }
-    defer orch.StopAll()
-
-    // 监控错误
-    go func() {
-        for err := range orch.MonitorErrors() {
-            log.Printf("管道错误: %v", err)
-        }
-    }()
-
-    // 查看状态
-    status := orch.GetStatus()
-    log.Printf("运行中的管道: %d", status.RunningCount)
-}
-```
-
-### 数据持久化到 TimescaleDB
-
-```go
-package main
-
-import (
-    "context"
-    "go_ProFiBus/storage"
-    infraStorage "go_ProFiBus/internal/infrastructure/storage"
-    "go_ProFiBus/pkg/interfaces"
-    "log"
-)
-
-func main() {
-    ctx := context.Background()
-
-    // 创建 PostgreSQL 连接
-    pgStore, err := storage.NewPostgresStore(
-        "localhost", 5432, "profibus_db", "user", "password",
-    )
-    if err != nil {
-        log.Fatalf("连接数据库失败: %v", err)
-    }
-    defer pgStore.Close()
-
-    // 创建时序数据仓储
-    repo := infraStorage.NewTimeSeriesRepository(pgStore)
-
-    // 批量写入数据（高性能）
-    samples := []interfaces.DataSample{
-        dataSample1,
-        dataSample2,
-        dataSample3,
-    }
-
-    if err := repo.WriteSamples(ctx, samples); err != nil {
-        log.Fatalf("写入失败: %v", err)
-    }
-
-    // 查询时间范围数据
-    results, _ := repo.QueryByTimeRange(
-        ctx,
-        "sensor-001",
-        startTime,
-        endTime,
-    )
-
-    log.Printf("查询到 %d 条记录", len(results))
-}
-```
-
 
 ## 📁 项目结构
 

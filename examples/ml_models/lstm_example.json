@@ -1,0 +1,20 @@
+{
+  "metadata": {
+    "version": "1.0",
+    "model_type": "lstm",
+    "input_shape": [1, 10, 5],
+    "output_shape": [1, 64],
+    "created_at": "2026-02-09T00:00:00Z",
+    "description": "示例LSTM模型 - 用于时间序列预测"
+  },
+  "hidden_size": 64,
+  "num_layers": 1,
+  "weights": {
+    "input_weight": [[0.1, 0.2], [0.3, 0.4]],
+    "hidden_weight": [[0.5, 0.6], [0.7, 0.8]]
+  },
+  "biases": {
+    "input_bias": [0.1, 0.2],
+    "hidden_bias": [0.3, 0.4]
+  }
+}

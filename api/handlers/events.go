@@ -2,7 +2,7 @@ package handlers
 
 import (
 	"fmt"
-	"go_ProFiBus/event"
+	eventDomain "go_ProFiBus/internal/domain/event"
 	"go_ProFiBus/storage"
 	"net/http"
 	"strconv"
@@ -154,7 +154,7 @@ func (h *EventHandler) GetEvent(c *gin.Context) {
 	}
 
 	// 查询事件
-	evt, err := h.store.GetEventByID(eventID)
+	evt, err := h.store.GetEvent(eventID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "查询事件失败", "details": err.Error()})
 		return
@@ -193,12 +193,13 @@ func (h *EventHandler) UpdateEvent(c *gin.Context) {
 	// 验证状态值
 	if req.Status != nil {
 		validStatuses := map[string]bool{
-			string(event.EventPending):   true,
-			string(event.EventConfirmed): true,
-			string(event.EventRejected):  true,
+			eventDomain.StatusNew:        true,
+			eventDomain.StatusProcessing: true,
+			eventDomain.StatusResolved:   true,
+			eventDomain.StatusClosed:     true,
 		}
 		if !validStatuses[*req.Status] {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "无效的状态值，必须是: pending, confirmed, rejected"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "无效的状态值"})
 			return
 		}
 	}
@@ -224,15 +225,34 @@ func (h *EventHandler) UpdateEvent(c *gin.Context) {
 		updates["metadata"] = req.Metadata
 	}
 
-	if err := h.store.UpdateEvent(eventID, updates); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "更新事件失败", "details": err.Error()})
+	// 获取当前事件
+	evt, err := h.store.GetEvent(eventID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "查询事件失败", "details": err.Error()})
 		return
 	}
 
-	// 返回更新后的事件
-	evt, err := h.store.GetEventByID(eventID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "查询更新后的事件失败", "details": err.Error()})
+	// 更新事件
+	if req.Status != nil {
+		evt.SetStatus(*req.Status)
+	}
+	if req.Severity != nil {
+		// 注意：Event 结构体没有 SetSeverity 方法，需要通过 metadata 存储
+		evt.SetMetadata("severity", *req.Severity)
+	}
+	if req.Description != nil {
+		// 注意：Event 结构体没有 SetDescription 方法，需要通过 metadata 存储
+		evt.SetMetadata("description", *req.Description)
+	}
+	if req.Metadata != nil {
+		for k, v := range req.Metadata {
+			evt.SetMetadata(k, v)
+		}
+	}
+
+	// 保存更新后的事件
+	if err := h.store.SaveEvent(evt); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "更新事件失败", "details": err.Error()})
 		return
 	}
 

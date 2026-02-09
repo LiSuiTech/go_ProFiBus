@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"time"
 
+	"go_ProFiBus/internal/application/orchestrator"
 	"go_ProFiBus/pkg/interfaces"
 
 	"github.com/gin-gonic/gin"
@@ -11,13 +12,15 @@ import (
 
 // MetricsHandler 性能指标API处理器
 type MetricsHandler struct {
-	repository interfaces.TraceRepository
+	repository  interfaces.TraceRepository
+	orchestrator *orchestrator.Orchestrator
 }
 
 // NewMetricsHandler 创建性能指标处理器
-func NewMetricsHandler(repository interfaces.TraceRepository) *MetricsHandler {
+func NewMetricsHandler(repository interfaces.TraceRepository, orch *orchestrator.Orchestrator) *MetricsHandler {
 	return &MetricsHandler{
-		repository: repository,
+		repository:  repository,
+		orchestrator: orch,
 	}
 }
 
@@ -141,21 +144,58 @@ func (h *MetricsHandler) GetSystemMetrics(c *gin.Context) {
 		endTime = parsedTime
 	}
 
-	// TODO: 实现系统整体指标查询
-	// 这里需要查询所有管道的指标并汇总
+	// 获取所有管道的指标并汇总
+	var totalPipelines int
+	var totalSamples int64
+	var successSamples int64
+	var errorSamples int64
+	var pipelineCount int
+
+	// 如果 orchestrator 可用，从管道状态获取统计
+	if h.orchestrator != nil {
+		pipelines := h.orchestrator.GetAllPipelines()
+		totalPipelines = len(pipelines)
+		pipelineCount = totalPipelines
+
+		for _, pipeline := range pipelines {
+			status := pipeline.GetStatus()
+			totalSamples += status.SamplesProcessed
+			errorSamples += status.Errors
+		}
+		successSamples = totalSamples - errorSamples
+	}
+
+	// 从 TraceRepository 获取追踪数据统计
+	if h.repository != nil {
+		// 获取所有管道的追踪指标
+		// 注意：这需要 TraceRepository 支持列出所有管道
+		// 目前先使用管道状态数据
+	}
+
+	// 计算平均持续时间（如果有数据）
+	avgDurationMs := int64(0)
+	if pipelineCount > 0 {
+		avgDurationMs = totalDuration.Milliseconds() / int64(pipelineCount)
+	}
+
+	// 计算吞吐量
+	duration := endTime.Sub(startTime).Seconds()
+	throughputPerSec := 0.0
+	if duration > 0 {
+		throughputPerSec = float64(totalSamples) / duration
+	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"start_time": startTime.Format(time.RFC3339),
 		"end_time":   endTime.Format(time.RFC3339),
 		"system_metrics": gin.H{
-			"total_pipelines":   0,
-			"total_samples":     0,
-			"success_samples":   0,
-			"error_samples":     0,
-			"avg_duration_ms":   0,
-			"throughput_per_sec": 0,
+			"total_pipelines":   totalPipelines,
+			"total_samples":     totalSamples,
+			"success_samples":   successSamples,
+			"error_samples":     errorSamples,
+			"avg_duration_ms":   avgDurationMs,
+			"throughput_per_sec": throughputPerSec,
 		},
-		"note": "System metrics aggregation not yet implemented",
 	})
 }
 

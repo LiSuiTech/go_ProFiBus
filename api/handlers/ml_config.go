@@ -2,11 +2,13 @@ package handlers
 
 import (
 	"net/http"
+	"os"
+	"path/filepath"
 
 	"github.com/gin-gonic/gin"
-	"go_ProFiBus/fusion"
 	"go_ProFiBus/internal/application/processor"
 	"go_ProFiBus/internal/infrastructure/analyzer"
+	"go_ProFiBus/pkg/interfaces"
 )
 
 // MLConfigHandler ML配置API处理器
@@ -254,7 +256,7 @@ func (h *MLConfigHandler) CreateFusionProcessor(c *gin.Context) {
 	var req struct {
 		ID            string             `json:"id" binding:"required"`
 		Name          string             `json:"name" binding:"required"`
-		Strategy      string             `json:"strategy"`
+		Strategy      string             `json:"strategy"` // 融合策略名称
 		SourceWeights map[string]float64 `json:"source_weights"`
 		TimeWindow    string             `json:"time_window"`
 		BufferSize    int                `json:"buffer_size"`
@@ -560,40 +562,60 @@ func (h *MLConfigHandler) UploadModel(c *gin.Context) {
 		return
 	}
 
-	// TODO: 保存模型文件到存储
-	_ = file
+	// 创建模型存储目录（如果不存在）
+	modelDir := "models"
+	if err := os.MkdirAll(modelDir, 0755); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create model directory: " + err.Error()})
+		return
+	}
+
+	// 构建文件路径：models/{id}/{filename}
+	modelPath := filepath.Join(modelDir, id, file.Filename)
+	if err := os.MkdirAll(filepath.Dir(modelPath), 0755); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create model directory: " + err.Error()})
+		return
+	}
+
+	// 保存文件
+	if err := c.SaveUploadedFile(file, modelPath); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save model file: " + err.Error()})
+		return
+	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"id":      id,
-		"message": "Model uploaded successfully",
+		"id":         id,
+		"model_path": modelPath,
+		"filename":   file.Filename,
+		"size":       file.Size,
+		"message":    "Model uploaded successfully",
 	})
 }
 
 // === 辅助函数 ===
 
-func parseStrategyFromString(strategy string) fusion.FusionStrategy {
+func parseStrategyFromString(strategy string) interfaces.FusionStrategy {
 	switch strategy {
 	case "average":
-		return fusion.StrategyAverage
+		return interfaces.FusionStrategyAverage
 	case "weighted":
-		return fusion.StrategyWeighted
+		return interfaces.FusionStrategyWeighted
 	case "kalman":
-		return fusion.StrategyKalman
+		return interfaces.FusionStrategyKalman
 	case "bayesian":
-		return fusion.StrategyBayesian
+		return interfaces.FusionStrategyBayesian
 	case "dempster_shafer":
-		return fusion.StrategyDempsterShafer
+		return interfaces.FusionStrategyDempsterShafer
 	case "time_sync":
-		return fusion.StrategyTimeSync
+		return interfaces.FusionStrategyTimeSync
 	case "interpolation":
-		return fusion.StrategyInterpolation
+		return interfaces.FusionStrategyInterpolation
 	case "extrapolation":
-		return fusion.StrategyExtrapolation
+		return interfaces.FusionStrategyExtrapolation
 	case "moving_average":
-		return fusion.StrategyMovingAverage
+		return interfaces.FusionStrategyMovingAverage
 	case "exponential_sma":
-		return fusion.StrategyExponentialSMA
+		return interfaces.FusionStrategyExponentialSMA
 	default:
-		return fusion.StrategyWeighted
+		return interfaces.FusionStrategyWeighted
 	}
 }

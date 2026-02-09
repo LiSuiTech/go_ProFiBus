@@ -4,34 +4,41 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	"time"
 
 	"go_ProFiBus/pkg/interfaces"
 )
 
 // Pipeline 数据处理管道
 type Pipeline struct {
-	name        string
-	source      interfaces.DataSource
-	processors  []interfaces.Processor
-	analyzers   []interfaces.Analyzer
-	sinks       []interfaces.DataSink
-	errorChan   chan error
-	stopChan    chan struct{}
-	wg          sync.WaitGroup
-	running     bool
-	mu          sync.RWMutex
+	name            string
+	source          interfaces.DataSource
+	processors      []interfaces.Processor
+	analyzers       []interfaces.Analyzer
+	sinks           []interfaces.DataSink
+	errorChan       chan error
+	stopChan        chan struct{}
+	wg              sync.WaitGroup
+	running         bool
+	mu              sync.RWMutex
+	statsMu         sync.RWMutex
+	samplesProcessed int64
+	errors          int64
+	lastSampleTime  time.Time
 }
 
 // NewPipeline 创建新的数据管道
 func NewPipeline(name string, source interfaces.DataSource) *Pipeline {
 	return &Pipeline{
-		name:       name,
-		source:     source,
-		processors: make([]interfaces.Processor, 0),
-		analyzers:  make([]interfaces.Analyzer, 0),
-		sinks:      make([]interfaces.DataSink, 0),
-		errorChan:  make(chan error, 100),
-		stopChan:   make(chan struct{}),
+		name:            name,
+		source:          source,
+		processors:       make([]interfaces.Processor, 0),
+		analyzers:       make([]interfaces.Analyzer, 0),
+		sinks:           make([]interfaces.DataSink, 0),
+		errorChan:       make(chan error, 100),
+		stopChan:        make(chan struct{}),
+		samplesProcessed: 0,
+		errors:          0,
 	}
 }
 
@@ -163,12 +170,22 @@ func (p *Pipeline) run(ctx context.Context) {
 
 // processSample 处理单个数据样本
 func (p *Pipeline) processSample(ctx context.Context, sample interfaces.DataSample) error {
+	// 更新统计：增加样本计数和最后样本时间
+	p.statsMu.Lock()
+	p.samplesProcessed++
+	p.lastSampleTime = sample.GetTimestamp()
+	p.statsMu.Unlock()
+
 	// 1. 通过处理器链处理数据
 	processedSample := sample
 	for _, processor := range p.processors {
 		var err error
 		processedSample, err = processor.Process(ctx, processedSample)
 		if err != nil {
+			// 更新错误计数
+			p.statsMu.Lock()
+			p.errors++
+			p.statsMu.Unlock()
 			return fmt.Errorf("processor %s failed: %w", processor.GetName(), err)
 		}
 	}
@@ -177,6 +194,10 @@ func (p *Pipeline) processSample(ctx context.Context, sample interfaces.DataSamp
 	for _, analyzer := range p.analyzers {
 		results, err := analyzer.Analyze(ctx, processedSample)
 		if err != nil {
+			// 更新错误计数
+			p.statsMu.Lock()
+			p.errors++
+			p.statsMu.Unlock()
 			p.errorChan <- fmt.Errorf("analyzer %s failed: %w", analyzer.GetName(), err)
 			continue
 		}
@@ -193,6 +214,10 @@ func (p *Pipeline) processSample(ctx context.Context, sample interfaces.DataSamp
 	// 3. 输出到所有 sink
 	for _, sink := range p.sinks {
 		if err := sink.Write(ctx, processedSample); err != nil {
+			// 更新错误计数
+			p.statsMu.Lock()
+			p.errors++
+			p.statsMu.Unlock()
 			p.errorChan <- fmt.Errorf("sink %s failed: %w", sink.GetName(), err)
 		}
 	}
@@ -220,24 +245,39 @@ func (p *Pipeline) IsRunning() bool {
 // GetStatus 获取管道状态
 func (p *Pipeline) GetStatus() PipelineStatus {
 	p.mu.RLock()
-	defer p.mu.RUnlock()
+	running := p.running
+	processorCount := len(p.processors)
+	analyzerCount := len(p.analyzers)
+	sinkCount := len(p.sinks)
+	p.mu.RUnlock()
+
+	p.statsMu.RLock()
+	samplesProcessed := p.samplesProcessed
+	errors := p.errors
+	lastSampleTime := p.lastSampleTime
+	p.statsMu.RUnlock()
 
 	status := "stopped"
-	if p.running {
+	if running {
 		status = "running"
 	}
 
+	lastSampleTimeStr := ""
+	if !lastSampleTime.IsZero() {
+		lastSampleTimeStr = lastSampleTime.Format(time.RFC3339)
+	}
+
 	return PipelineStatus{
-		Name:              p.name,
-		Running:           p.running,
-		Status:            status,
-		SourceStatus:      p.source.GetStatus(),
-		ProcessorCount:    len(p.processors),
-		AnalyzerCount:     len(p.analyzers),
-		SinkCount:         len(p.sinks),
-		SamplesProcessed:  0, // TODO: 实现样本计数
-		Errors:            0, // TODO: 实现错误计数
-		LastSampleTime:    "", // TODO: 实现最后样本时间
+		Name:             p.name,
+		Running:          running,
+		Status:           status,
+		SourceStatus:     p.source.GetStatus(),
+		ProcessorCount:   processorCount,
+		AnalyzerCount:    analyzerCount,
+		SinkCount:        sinkCount,
+		SamplesProcessed: samplesProcessed,
+		Errors:           errors,
+		LastSampleTime:   lastSampleTimeStr,
 	}
 }
 

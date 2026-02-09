@@ -265,7 +265,7 @@ type ConfigRepository interface {
 	// Rule configuration methods
 	CreateRuleConfig(ctx context.Context, config *RuleConfig) error
 	GetRuleConfig(ctx context.Context, id string) (*RuleConfig, error)
-	ListRuleConfigs(ctx context.Context, enabled *bool) ([]*RuleConfig, error)
+	ListRuleConfigs(ctx context.Context, enabled *bool, ruleType *string) ([]*RuleConfig, error)
 	UpdateRuleConfig(ctx context.Context, config *RuleConfig) error
 	DeleteRuleConfig(ctx context.Context, id string) error
 

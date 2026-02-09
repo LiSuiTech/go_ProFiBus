@@ -3,17 +3,25 @@ package storage
 import (
 	"encoding/json"
 	"fmt"
-	"go_ProFiBus/event"
+	eventDomain "go_ProFiBus/internal/domain/event"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 )
 
 // SaveEvent 保存事件
-func (ps *PostgresStore) SaveEvent(evt *event.Event) error {
-	metadataJSON, err := json.Marshal(evt.Metadata)
+func (ps *PostgresStore) SaveEvent(evt *eventDomain.Event) error {
+	metadataJSON, err := json.Marshal(evt.GetMetadata())
 	if err != nil {
 		return fmt.Errorf("序列化元数据失败: %w", err)
+	}
+
+	// 从 metadata 中获取 source_id，如果没有则使用空字符串
+	sourceID := ""
+	if metadata := evt.GetMetadata(); metadata != nil {
+		if sid, ok := metadata["source_id"].(string); ok {
+			sourceID = sid
+		}
 	}
 
 	query := `
@@ -26,49 +34,56 @@ func (ps *PostgresStore) SaveEvent(evt *event.Event) error {
 	`
 
 	_, err = ps.Exec(query,
-		evt.ID,
-		evt.Type,
-		string(evt.Status),
-		evt.Timestamp,
-		evt.Severity,
-		evt.Score,
-		evt.Description,
+		evt.GetID(),
+		evt.GetType(),
+		evt.GetStatus(),
+		evt.GetTimestamp(),
+		evt.GetSeverity(),
+		evt.GetScore(),
+		evt.GetDescription(),
 		metadataJSON,
-		evt.SourceID,
+		sourceID,
 	)
 
 	if err != nil {
 		return fmt.Errorf("保存事件失败: %w", err)
 	}
 
-	ps.log.Debug("保存事件成功: %s", evt.ID)
+	ps.log.Debug("保存事件成功: %s", evt.GetID())
 	return nil
 }
 
 // SaveEvents 批量保存事件
-func (ps *PostgresStore) SaveEvents(events []*event.Event) error {
+func (ps *PostgresStore) SaveEvents(events []*eventDomain.Event) error {
 	if len(events) == 0 {
 		return nil
 	}
 
 	rows := make([][]interface{}, len(events))
 	for i, evt := range events {
-		metadataJSON, err := json.Marshal(evt.Metadata)
+		metadataJSON, err := json.Marshal(evt.GetMetadata())
 		if err != nil {
 			ps.log.Warn("序列化元数据失败: %v", err)
 			metadataJSON = []byte("{}")
 		}
 
+		sourceID := ""
+		if metadata := evt.GetMetadata(); metadata != nil {
+			if sid, ok := metadata["source_id"].(string); ok {
+				sourceID = sid
+			}
+		}
+
 		rows[i] = []interface{}{
-			evt.ID,
-			evt.Type,
-			string(evt.Status),
-			evt.Timestamp,
-			evt.Severity,
-			evt.Score,
-			evt.Description,
+			evt.GetID(),
+			evt.GetType(),
+			evt.GetStatus(),
+			evt.GetTimestamp(),
+			evt.GetSeverity(),
+			evt.GetScore(),
+			evt.GetDescription(),
 			metadataJSON,
-			evt.SourceID,
+			sourceID,
 		}
 	}
 
@@ -89,27 +104,31 @@ func (ps *PostgresStore) SaveEvents(events []*event.Event) error {
 }
 
 // GetEvent 获取事件
-func (ps *PostgresStore) GetEvent(eventID string) (*event.Event, error) {
+func (ps *PostgresStore) GetEvent(eventID string) (*eventDomain.Event, error) {
 	query := `
 		SELECT id, type, status, timestamp, severity, score, description, metadata, source_id
 		FROM events
 		WHERE id = $1
 	`
 
-	var evt event.Event
+	var id, eventType, status string
+	var timestamp time.Time
+	var severity int
+	var score float64
+	var description string
 	var metadataJSON []byte
-	var status string
+	var sourceID string
 
 	err := ps.QueryRow(query, eventID).Scan(
-		&evt.ID,
-		&evt.Type,
+		&id,
+		&eventType,
 		&status,
-		&evt.Timestamp,
-		&evt.Severity,
-		&evt.Score,
-		&evt.Description,
+		&timestamp,
+		&severity,
+		&score,
+		&description,
 		&metadataJSON,
-		&evt.SourceID,
+		&sourceID,
 	)
 
 	if err != nil {
@@ -119,20 +138,30 @@ func (ps *PostgresStore) GetEvent(eventID string) (*event.Event, error) {
 		return nil, fmt.Errorf("查询事件失败: %w", err)
 	}
 
-	evt.Status = event.EventStatus(status)
-
-	if err := json.Unmarshal(metadataJSON, &evt.Metadata); err != nil {
+	var metadata map[string]interface{}
+	if err := json.Unmarshal(metadataJSON, &metadata); err != nil {
 		ps.log.Warn("反序列化元数据失败: %v", err)
-		evt.Metadata = make(map[string]interface{})
+		metadata = make(map[string]interface{})
+	}
+	if sourceID != "" {
+		metadata["source_id"] = sourceID
 	}
 
-	return &evt, nil
+	evt := eventDomain.NewEvent(eventType, severity, description)
+	evt.SetStatus(status)
+	evt.UpdateScore(score)
+	for k, v := range metadata {
+		evt.SetMetadata(k, v)
+	}
+
+	return evt, nil
 }
 
 // EventFilters 事件过滤器
 type EventFilters struct {
-	Status    *event.EventStatus
-	Type      *event.EventType
+	Status    *string
+	Type      *string
+	Severity  *int
 	StartTime *time.Time
 	EndTime   *time.Time
 	SourceID  *string
@@ -141,7 +170,7 @@ type EventFilters struct {
 }
 
 // QueryEvents 查询事件
-func (ps *PostgresStore) QueryEvents(filters EventFilters) ([]*event.Event, error) {
+func (ps *PostgresStore) QueryEvents(filters EventFilters) ([]*eventDomain.Event, error) {
 	query := `
 		SELECT id, type, status, timestamp, severity, score, description, metadata, source_id
 		FROM events
@@ -201,37 +230,50 @@ func (ps *PostgresStore) QueryEvents(filters EventFilters) ([]*event.Event, erro
 	}
 	defer rows.Close()
 
-	events := make([]*event.Event, 0)
+	events := make([]*eventDomain.Event, 0)
 
 	for rows.Next() {
-		var evt event.Event
+		var id, eventType, status string
+		var timestamp time.Time
+		var severity int
+		var score float64
+		var description string
 		var metadataJSON []byte
-		var status string
+		var sourceID string
 
 		err := rows.Scan(
-			&evt.ID,
-			&evt.Type,
+			&id,
+			&eventType,
 			&status,
-			&evt.Timestamp,
-			&evt.Severity,
-			&evt.Score,
-			&evt.Description,
+			&timestamp,
+			&severity,
+			&score,
+			&description,
 			&metadataJSON,
-			&evt.SourceID,
+			&sourceID,
 		)
 		if err != nil {
 			ps.log.Warn("扫描事件失败: %v", err)
 			continue
 		}
 
-		evt.Status = event.EventStatus(status)
-
-		if err := json.Unmarshal(metadataJSON, &evt.Metadata); err != nil {
+		var metadata map[string]interface{}
+		if err := json.Unmarshal(metadataJSON, &metadata); err != nil {
 			ps.log.Warn("反序列化元数据失败: %v", err)
-			evt.Metadata = make(map[string]interface{})
+			metadata = make(map[string]interface{})
+		}
+		if sourceID != "" {
+			metadata["source_id"] = sourceID
 		}
 
-		events = append(events, &evt)
+		evt := eventDomain.NewEvent(eventType, severity, description)
+		evt.SetStatus(status)
+		evt.UpdateScore(score)
+		for k, v := range metadata {
+			evt.SetMetadata(k, v)
+		}
+
+		events = append(events, evt)
 	}
 
 	if err := rows.Err(); err != nil {
@@ -244,7 +286,7 @@ func (ps *PostgresStore) QueryEvents(filters EventFilters) ([]*event.Event, erro
 // UpdateEventStatus 更新事件状态
 func (ps *PostgresStore) UpdateEventStatus(
 	eventID string,
-	status event.EventStatus,
+	status string,
 	reviewer string,
 	notes string,
 ) error {
@@ -258,7 +300,7 @@ func (ps *PostgresStore) UpdateEventStatus(
 		WHERE id = $4
 	`
 
-	tag, err := ps.Exec(query, string(status), reviewer, notes, eventID)
+	tag, err := ps.Exec(query, status, reviewer, notes, eventID)
 	if err != nil {
 		return fmt.Errorf("更新事件状态失败: %w", err)
 	}
@@ -377,12 +419,12 @@ func (ps *PostgresStore) GetEventStats(start, end time.Time) (*EventStats, error
 			continue
 		}
 
-		switch event.EventStatus(status) {
-		case event.EventStatusPending:
+		switch status {
+		case "pending":
 			stats.PendingEvents = count
-		case event.EventStatusConfirmed:
+		case "confirmed":
 			stats.ConfirmedEvents = count
-		case event.EventStatusRejected:
+		case "rejected":
 			stats.RejectedEvents = count
 		}
 	}

@@ -1,7 +1,8 @@
 package handlers
 
 import (
-	"go_ProFiBus/internal/domain/channel"
+	"go_ProFiBus/internal/application/channel"
+	channelDomain "go_ProFiBus/internal/domain/channel"
 	"go_ProFiBus/pkg/interfaces"
 	"net/http"
 
@@ -10,12 +11,16 @@ import (
 
 // ChannelHandler 采集通道处理器
 type ChannelHandler struct {
-	repo interfaces.ChannelRepository
+	repo    interfaces.ChannelRepository
+	manager *channel.Manager
 }
 
 // NewChannelHandler 创建采集通道处理器
-func NewChannelHandler(repo interfaces.ChannelRepository) *ChannelHandler {
-	return &ChannelHandler{repo: repo}
+func NewChannelHandler(repo interfaces.ChannelRepository, manager *channel.Manager) *ChannelHandler {
+	return &ChannelHandler{
+		repo:    repo,
+		manager: manager,
+	}
 }
 
 // GetProtocols 获取支持的协议列表
@@ -25,7 +30,7 @@ func NewChannelHandler(repo interfaces.ChannelRepository) *ChannelHandler {
 // @Success 200 {object} map[string]interface{}
 // @Router /api/v1/protocols [get]
 func (h *ChannelHandler) GetProtocols(c *gin.Context) {
-	protocols := channel.GetSupportedProtocols()
+	protocols := channelDomain.GetSupportedProtocols()
 	c.JSON(http.StatusOK, gin.H{
 		"protocols": protocols,
 	})
@@ -86,7 +91,7 @@ func (h *ChannelHandler) CreateChannel(c *gin.Context) {
 
 	// 设置初始状态
 	if ch.Status == "" {
-		ch.Status = channel.StatusStopped
+		ch.Status = channelDomain.StatusStopped
 	}
 	if ch.Enabled == false {
 		ch.Enabled = true
@@ -158,14 +163,20 @@ func (h *ChannelHandler) StartChannel(c *gin.Context) {
 	// TODO: 实现实际的通道启动逻辑
 	// 这里需要与采集器集成
 
-	if err := h.repo.UpdateChannelStatus(c.Request.Context(), id, channel.StatusRunning); err != nil {
+	if err := h.repo.UpdateChannelStatus(c.Request.Context(), id, channelDomain.StatusRunning); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	// 使用通道管理器启动通道
+	if err := h.manager.StartChannel(c.Request.Context(), id); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"message": "channel started successfully",
-		"status":  string(channel.StatusRunning),
+		"status":  string(channelDomain.StatusRunning),
 	})
 }
 
@@ -182,14 +193,20 @@ func (h *ChannelHandler) StopChannel(c *gin.Context) {
 	// TODO: 实现实际的通道停止逻辑
 	// 这里需要与采集器集成
 
-	if err := h.repo.UpdateChannelStatus(c.Request.Context(), id, channel.StatusStopped); err != nil {
+	if err := h.repo.UpdateChannelStatus(c.Request.Context(), id, channelDomain.StatusStopped); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	// 使用通道管理器停止通道
+	if err := h.manager.StopChannel(c.Request.Context(), id); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"message": "channel stopped successfully",
-		"status":  string(channel.StatusStopped),
+		"status":  string(channelDomain.StatusStopped),
 	})
 }
 

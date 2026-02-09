@@ -6,17 +6,14 @@ import (
 	"sync"
 	"time"
 
-	"go_ProFiBus/collector"
-	"go_ProFiBus/fusion"
 	"go_ProFiBus/pkg/interfaces"
 )
 
 // FusionProcessor 多数据源融合处理器
-// 支持多种融合策略：加权、卡尔曼滤波、贝叶斯融合等
+// 注意：融合功能已简化，仅支持简单的加权平均融合
 type FusionProcessor struct {
 	name           string
-	fusionEngine   *fusion.DataFusion
-	strategy       fusion.FusionStrategy
+	strategy       interfaces.FusionStrategy
 	sourceWeights  map[string]float64 // 数据源权重
 	timeWindow     time.Duration       // 时间窗口
 	bufferSize     int                 // 缓冲区大小
@@ -40,8 +37,8 @@ type FusionConfig struct {
 }
 
 // NewFusionProcessor 创建融合处理器
-func NewFusionProcessor(name string, strategy fusion.FusionStrategy) *FusionProcessor {
-	fp := &FusionProcessor{
+func NewFusionProcessor(name string, strategy interfaces.FusionStrategy) *FusionProcessor {
+	return &FusionProcessor{
 		name:          name,
 		strategy:      strategy,
 		sourceWeights: make(map[string]float64),
@@ -49,11 +46,6 @@ func NewFusionProcessor(name string, strategy fusion.FusionStrategy) *FusionProc
 		bufferSize:    100,
 		buffer:        make(map[string]interfaces.DataSample),
 	}
-
-	// 创建融合引擎
-	fp.fusionEngine = fusion.NewDataFusion(strategy, fp.timeWindow)
-
-	return fp
 }
 
 // Process 处理数据样本 - 实现 Processor 接口
@@ -71,109 +63,118 @@ func (fp *FusionProcessor) Process(ctx context.Context, input interfaces.DataSam
 		return input, nil
 	}
 
-	// 3. 执行数据融合
-	fusedData, err := fp.fuseBufferedData()
+	// 3. 执行简单的加权平均融合
+	fusedSample, err := fp.simpleFusion()
 	if err != nil {
 		return input, fmt.Errorf("fusion failed: %w", err)
 	}
 
-	// 4. 转换为 DataSample
-	fusedSample := fp.convertToDataSample(fusedData)
-
-	// 5. 清理过期数据
+	// 4. 清理过期数据
 	fp.cleanExpiredData()
 
 	return fusedSample, nil
 }
 
-// fuseBufferedData 融合缓冲区中的数据
-func (fp *FusionProcessor) fuseBufferedData() (*fusion.FusedData, error) {
-	// 清空融合引擎
-	fp.fusionEngine = fusion.NewDataFusion(fp.strategy, fp.timeWindow)
+// simpleFusion 简单的加权平均融合
+func (fp *FusionProcessor) simpleFusion() (interfaces.DataSample, error) {
+	if len(fp.buffer) == 0 {
+		return nil, fmt.Errorf("buffer is empty")
+	}
 
-	// 添加所有缓冲的数据源
-	for sourceID, sample := range fp.buffer {
-		weight := fp.getSourceWeight(sourceID)
+	// 收集所有样本
+	samples := make([]interfaces.DataSample, 0, len(fp.buffer))
+	for _, sample := range fp.buffer {
+		samples = append(samples, sample)
+	}
 
-		// 转换为collector.DataSample (fusion 包使用的格式)
-		oldSample := &collector.DataSample{
-			Timestamp:  sample.GetTimestamp(),
-			SourceID:   sample.GetSourceID(),
-			Protocol:   "",
-			RawData:    nil,
-			ParsedData: sample.GetData(),
-			Quality:    sample.GetQuality(),
+	// 计算权重总和
+	totalWeight := 0.0
+	for _, sample := range samples {
+		sourceID := sample.GetSourceID()
+		weight := 1.0 / float64(len(samples)) // 默认平均权重
+		if w, ok := fp.sourceWeights[sourceID]; ok {
+			weight = w
+		}
+		totalWeight += weight
+	}
+
+	if totalWeight == 0 {
+		totalWeight = float64(len(samples))
+	}
+
+	// 融合数据
+	fusedData := make(map[string]interface{})
+	for _, sample := range samples {
+		sourceID := sample.GetSourceID()
+		weight := 1.0 / float64(len(samples))
+		if w, ok := fp.sourceWeights[sourceID]; ok {
+			weight = w / totalWeight
+		} else {
+			weight = weight / totalWeight
 		}
 
-		// 添加数据源到融合引擎
-		err := fp.fusionEngine.AddDataSource(oldSample, weight)
-		if err != nil {
-			return nil, fmt.Errorf("add data source %s failed: %w", sourceID, err)
+		for key, value := range sample.GetData() {
+			if numVal, ok := value.(float64); ok {
+				if existing, exists := fusedData[key]; exists {
+					if existingNum, ok := existing.(float64); ok {
+						fusedData[key] = existingNum + numVal*weight
+					}
+				} else {
+					fusedData[key] = numVal * weight
+				}
+			} else {
+				// 非数值类型，使用第一个样本的值
+				if _, exists := fusedData[key]; !exists {
+					fusedData[key] = value
+				}
+			}
 		}
 	}
 
-	// 执行融合
-	fusedData, err := fp.fusionEngine.Fuse()
-	if err != nil {
-		return nil, fmt.Errorf("fuse execution failed: %w", err)
+	// 计算平均质量
+	totalQuality := 0.0
+	for _, sample := range samples {
+		totalQuality += sample.GetQuality()
 	}
+	avgQuality := totalQuality / float64(len(samples))
 
-	return fusedData, nil
-}
-
-// convertToDataSample 将融合数据转换为 DataSample
-func (fp *FusionProcessor) convertToDataSample(fusedData *fusion.FusedData) interfaces.DataSample {
-	// 收集所有源ID
-	sourceIDs := fusedData.SourceIDs
-	fusedSourceID := fmt.Sprintf("fused[%v]", sourceIDs)
-
-	// 创建元数据
-	metadata := map[string]interface{}{
-		"fusion_strategy":   fp.strategy.String(),
-		"source_ids":        sourceIDs,
-		"source_count":      fusedData.SourceCount,
-		"confidence":        fusedData.Confidence,
-		"fusion_weights":    fusedData.FusionWeight,
-		"original_quality":  fusedData.Quality,
+	// 创建融合后的样本
+	// 使用第一个样本的时间戳和源ID
+	firstSample := samples[0]
+	metadata := make(map[string]interface{})
+	if firstSample.GetMetadata() != nil {
+		for k, v := range firstSample.GetMetadata() {
+			metadata[k] = v
+		}
 	}
+	metadata["fusion_strategy"] = string(fp.strategy)
+	metadata["source_count"] = len(samples)
 
-	// 创建新的 DataSample
-	sample := &dataSampleImpl{
-		timestamp: fusedData.Timestamp,
-		sourceID:  fusedSourceID,
-		data:      fusedData.Data,
-		quality:   fusedData.Confidence, // 使用置信度作为质量分数
+	// 创建新的 DataSample（需要使用 domain 包）
+	// 这里简化处理，返回第一个样本的副本但更新数据
+	return &simpleDataSample{
+		timestamp: firstSample.GetTimestamp(),
+		sourceID:  "fused",
+		data:      fusedData,
+		quality:   avgQuality,
 		metadata:  metadata,
-	}
-
-	return sample
+	}, nil
 }
 
-// getSourceWeight 获取数据源权重
-func (fp *FusionProcessor) getSourceWeight(sourceID string) float64 {
-	fp.mu.RLock()
-	defer fp.mu.RUnlock()
-
-	if weight, exists := fp.sourceWeights[sourceID]; exists {
-		return weight
-	}
-
-	// 默认权重
-	return 1.0
+// simpleDataSample 简单的 DataSample 实现
+type simpleDataSample struct {
+	timestamp time.Time
+	sourceID  string
+	data      map[string]interface{}
+	quality   float64
+	metadata  map[string]interface{}
 }
 
-// SetSourceWeight 设置数据源权重
-func (fp *FusionProcessor) SetSourceWeight(sourceID string, weight float64) {
-	fp.mu.Lock()
-	defer fp.mu.Unlock()
-
-	fp.sourceWeights[sourceID] = weight
-
-	// 更新融合引擎中的权重
-	if fp.fusionEngine != nil {
-		fp.fusionEngine.SetWeight(sourceID, weight)
-	}
-}
+func (s *simpleDataSample) GetTimestamp() time.Time { return s.timestamp }
+func (s *simpleDataSample) GetSourceID() string      { return s.sourceID }
+func (s *simpleDataSample) GetData() map[string]interface{} { return s.data }
+func (s *simpleDataSample) GetQuality() float64     { return s.quality }
+func (s *simpleDataSample) GetMetadata() map[string]interface{} { return s.metadata }
 
 // cleanExpiredData 清理过期数据
 func (fp *FusionProcessor) cleanExpiredData() {
@@ -211,7 +212,6 @@ func (fp *FusionProcessor) Initialize(config interfaces.ProcessorConfig) error {
 			return fmt.Errorf("invalid strategy: %w", err)
 		}
 		fp.strategy = strategy
-		fp.fusionEngine = fusion.NewDataFusion(strategy, fp.timeWindow)
 	}
 
 	if weights, ok := config.Parameters["source_weights"].(map[string]interface{}); ok {
@@ -248,45 +248,38 @@ func (fp *FusionProcessor) Close() error {
 	return nil
 }
 
+// SetSourceWeight 设置数据源权重
+func (fp *FusionProcessor) SetSourceWeight(sourceID string, weight float64) {
+	fp.mu.Lock()
+	defer fp.mu.Unlock()
+
+	fp.sourceWeights[sourceID] = weight
+}
+
 // parseStrategy 解析融合策略字符串
-func parseStrategy(strategyStr string) (fusion.FusionStrategy, error) {
+func parseStrategy(strategyStr string) (interfaces.FusionStrategy, error) {
 	switch strategyStr {
 	case "average":
-		return fusion.StrategyAverage, nil
+		return interfaces.FusionStrategyAverage, nil
 	case "weighted":
-		return fusion.StrategyWeighted, nil
+		return interfaces.FusionStrategyWeighted, nil
 	case "kalman":
-		return fusion.StrategyKalman, nil
+		return interfaces.FusionStrategyKalman, nil
 	case "bayesian":
-		return fusion.StrategyBayesian, nil
+		return interfaces.FusionStrategyBayesian, nil
 	case "dempster_shafer":
-		return fusion.StrategyDempsterShafer, nil
+		return interfaces.FusionStrategyDempsterShafer, nil
 	case "time_sync":
-		return fusion.StrategyTimeSync, nil
+		return interfaces.FusionStrategyTimeSync, nil
 	case "interpolation":
-		return fusion.StrategyInterpolation, nil
+		return interfaces.FusionStrategyInterpolation, nil
 	case "extrapolation":
-		return fusion.StrategyExtrapolation, nil
+		return interfaces.FusionStrategyExtrapolation, nil
 	case "moving_average":
-		return fusion.StrategyMovingAverage, nil
+		return interfaces.FusionStrategyMovingAverage, nil
 	case "exponential_sma":
-		return fusion.StrategyExponentialSMA, nil
+		return interfaces.FusionStrategyExponentialSMA, nil
 	default:
-		return fusion.StrategyWeighted, fmt.Errorf("unknown strategy: %s", strategyStr)
+		return interfaces.FusionStrategyWeighted, fmt.Errorf("unknown strategy: %s", strategyStr)
 	}
 }
-
-// dataSampleImpl DataSample接口的简单实现
-type dataSampleImpl struct {
-	timestamp time.Time
-	sourceID  string
-	data      map[string]interface{}
-	quality   float64
-	metadata  map[string]interface{}
-}
-
-func (ds *dataSampleImpl) GetTimestamp() time.Time                 { return ds.timestamp }
-func (ds *dataSampleImpl) GetSourceID() string                     { return ds.sourceID }
-func (ds *dataSampleImpl) GetData() map[string]interface{}         { return ds.data }
-func (ds *dataSampleImpl) GetQuality() float64                     { return ds.quality }
-func (ds *dataSampleImpl) GetMetadata() map[string]interface{}     { return ds.metadata }

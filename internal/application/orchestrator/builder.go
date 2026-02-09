@@ -162,9 +162,10 @@ func (b *PipelineBuilder) Reset() *PipelineBuilder {
 // TopologyBuilder 拓扑构建器
 // 用于构建复杂的数据流拓扑（多管道协同）
 type TopologyBuilder struct {
-	pipelines []*Pipeline
-	edges     []Edge
-	errors    []error
+	pipelines      []*Pipeline
+	edges          []Edge
+	errors         []error
+	pipelineSources map[string]*PipelineDataSource // 管道名称 -> 数据源
 }
 
 // Edge 管道间的连接边
@@ -177,9 +178,10 @@ type Edge struct {
 // NewTopologyBuilder 创建拓扑构建器
 func NewTopologyBuilder() *TopologyBuilder {
 	return &TopologyBuilder{
-		pipelines: make([]*Pipeline, 0),
-		edges:     make([]Edge, 0),
-		errors:    make([]error, 0),
+		pipelines:       make([]*Pipeline, 0),
+		edges:           make([]Edge, 0),
+		errors:          make([]error, 0),
+		pipelineSources: make(map[string]*PipelineDataSource),
 	}
 }
 
@@ -211,15 +213,67 @@ func (tb *TopologyBuilder) Build() (*Orchestrator, error) {
 
 	orchestrator := NewOrchestrator()
 
-	// 添加所有管道
+	// 创建管道名称映射
+	pipelineMap := make(map[string]*Pipeline)
 	for _, pipeline := range tb.pipelines {
+		pipelineMap[pipeline.name] = pipeline
+	}
+
+	// 为需要连接的管道创建数据源
+	for _, edge := range tb.edges {
+		// 检查目标管道是否存在
+		toPipeline, exists := pipelineMap[edge.ToPipeline]
+		if !exists {
+			return nil, fmt.Errorf("目标管道不存在: %s", edge.ToPipeline)
+		}
+
+		// 创建或获取管道数据源
+		source, exists := tb.pipelineSources[edge.ToPipeline]
+		if !exists {
+			source = NewPipelineDataSource(
+				fmt.Sprintf("pipeline_source_%s", edge.ToPipeline),
+				fmt.Sprintf("Pipeline Source for %s", edge.ToPipeline),
+			)
+			tb.pipelineSources[edge.ToPipeline] = source
+			
+			// 将数据源设置为目标管道的源
+			// 注意：这需要修改 Pipeline 以支持动态更换源
+			// 目前我们创建一个新的管道实例
+			newPipeline := NewPipeline(toPipeline.name, source)
+		// 复制处理器、分析器和接收器
+		for _, processor := range toPipeline.GetProcessors() {
+			newPipeline.AddProcessor(processor)
+		}
+		for _, analyzer := range toPipeline.GetAnalyzers() {
+			newPipeline.AddAnalyzer(analyzer)
+		}
+		for _, sink := range toPipeline.GetSinks() {
+			newPipeline.AddSink(sink)
+		}
+			// 替换原管道
+			pipelineMap[edge.ToPipeline] = newPipeline
+		}
+
+		// 检查源管道是否存在
+		fromPipeline, exists := pipelineMap[edge.FromPipeline]
+		if !exists {
+			return nil, fmt.Errorf("源管道不存在: %s", edge.FromPipeline)
+		}
+
+		// 创建管道接收器并添加到源管道
+		sink := NewPipelineSink(
+			fmt.Sprintf("pipeline_sink_%s_to_%s", edge.FromPipeline, edge.ToPipeline),
+			source,
+		)
+		fromPipeline.AddSink(sink)
+	}
+
+	// 添加所有管道到编排器
+	for _, pipeline := range pipelineMap {
 		if err := orchestrator.AddPipeline(pipeline); err != nil {
 			return nil, fmt.Errorf("failed to add pipeline %s: %w", pipeline.name, err)
 		}
 	}
-
-	// TODO: 实现管道间的数据流连接
-	// 这需要实现一个管道输出到另一个管道输入的机制
 
 	return orchestrator, nil
 }

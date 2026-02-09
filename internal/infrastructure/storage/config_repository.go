@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -124,7 +125,7 @@ func (r *ConfigRepository) GetRuleConfig(ctx context.Context, id string) (*inter
 }
 
 // ListRuleConfigs lists all rule configurations with optional filtering
-func (r *ConfigRepository) ListRuleConfigs(ctx context.Context, enabled *bool) ([]*interfaces.RuleConfig, error) {
+func (r *ConfigRepository) ListRuleConfigs(ctx context.Context, enabled *bool, ruleType *string) ([]*interfaces.RuleConfig, error) {
 	query := `
 		SELECT id, name, description, type, version, parameters, enabled, priority,
 		       created_at, updated_at, created_by, updated_by
@@ -132,9 +133,23 @@ func (r *ConfigRepository) ListRuleConfigs(ctx context.Context, enabled *bool) (
 	`
 
 	var args []interface{}
+	conditions := []string{}
+	argIndex := 1
+
 	if enabled != nil {
-		query += " WHERE enabled = $1"
+		conditions = append(conditions, fmt.Sprintf("enabled = $%d", argIndex))
 		args = append(args, *enabled)
+		argIndex++
+	}
+
+	if ruleType != nil && *ruleType != "" {
+		conditions = append(conditions, fmt.Sprintf("type = $%d", argIndex))
+		args = append(args, *ruleType)
+		argIndex++
+	}
+
+	if len(conditions) > 0 {
+		query += " WHERE " + strings.Join(conditions, " AND ")
 	}
 
 	query += " ORDER BY priority DESC, created_at DESC"
@@ -1034,7 +1049,7 @@ func (r *ConfigRepository) ExportConfigs(ctx context.Context, configType string)
 
 	switch configType {
 	case "rule":
-		data, err = r.ListRuleConfigs(ctx, nil)
+		data, err = r.ListRuleConfigs(ctx, nil, nil)
 	case "analyzer":
 		data, err = r.ListAnalyzerConfigs(ctx, nil)
 	case "processor":

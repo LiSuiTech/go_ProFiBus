@@ -1,0 +1,19 @@
+{
+  "metadata": {
+    "version": "1.0",
+    "model_type": "svm",
+    "input_shape": [10],
+    "output_shape": [1],
+    "created_at": "2026-02-09T00:00:00Z",
+    "description": "示例SVM模型 - 用于二分类"
+  },
+  "support_vectors": [
+    [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0],
+    [2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0]
+  ],
+  "weights": [0.5, -0.3],
+  "bias": 0.1,
+  "kernel": "rbf",
+  "gamma": 0.1,
+  "degree": 3
+}

@@ -21,6 +21,38 @@
               <el-icon><Connection /></el-icon>
               <span>采集通道</span>
             </el-menu-item>
+            <el-menu-item index="/devices">
+              <el-icon><Setting /></el-icon>
+              <span>设备管理</span>
+            </el-menu-item>
+            <el-menu-item index="/alerts">
+              <el-icon><Bell /></el-icon>
+              <span>告警中心</span>
+            </el-menu-item>
+            <el-menu-item index="/device-layout">
+              <el-icon><MapLocation /></el-icon>
+              <span>设备布局</span>
+            </el-menu-item>
+            <el-menu-item index="/predictions">
+              <el-icon><TrendCharts /></el-icon>
+              <span>预测分析</span>
+            </el-menu-item>
+            <el-menu-item index="/control">
+              <el-icon><SwitchButton /></el-icon>
+              <span>设备控制</span>
+            </el-menu-item>
+            <el-menu-item index="/data-management">
+              <el-icon><FolderOpened /></el-icon>
+              <span>数据管理</span>
+            </el-menu-item>
+            <el-menu-item index="/workflow-editor">
+              <el-icon><Operation /></el-icon>
+              <span>工作流编辑器</span>
+            </el-menu-item>
+            <el-menu-item index="/realtime-data-stream">
+              <el-icon><DataLine /></el-icon>
+              <span>实时数据流</span>
+            </el-menu-item>
           </el-menu>
         </div>
         <div class="header-actions">
@@ -42,7 +74,7 @@
 import { onMounted, onUnmounted, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { useTraceStore } from './stores/trace'
-import { Monitor } from '@element-plus/icons-vue'
+import { Monitor, Connection, Setting, Bell, MapLocation, TrendCharts, SwitchButton, FolderOpened, Operation, DataLine } from '@element-plus/icons-vue'
 
 const route = useRoute()
 const traceStore = useTraceStore()

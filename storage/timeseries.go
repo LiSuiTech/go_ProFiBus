@@ -4,33 +4,49 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"go_ProFiBus/collector"
+	"go_ProFiBus/pkg/interfaces"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 )
 
 // WriteSensorReadings 批量写入传感器数据
-func (ps *PostgresStore) WriteSensorReadings(samples []*collector.DataSample) error {
-	if len(samples) == 0 {
+func (ps *PostgresStore) WriteSensorReadings(readings []map[string]interface{}) error {
+	if len(readings) == 0 {
 		return nil
 	}
 
 	// 使用COPY FROM进行批量插入（性能最优）
-	rows := make([][]interface{}, len(samples))
-	for i, sample := range samples {
-		dataJSON, err := json.Marshal(sample.ParsedData)
+	rows := make([][]interface{}, len(readings))
+	for i, reading := range readings {
+		// 从 reading map 中提取字段
+		timestamp, _ := reading["timestamp"].(time.Time)
+		sensorID, _ := reading["sensor_id"].(string)
+		protocol, _ := reading["protocol"].(string)
+		if protocol == "" {
+			protocol = "unknown"
+		}
+		data, _ := reading["data"].(map[string]interface{})
+		if data == nil {
+			data = reading // 如果没有单独的 data 字段，使用整个 reading
+		}
+		quality, _ := reading["quality"].(float64)
+		if quality == 0 {
+			quality = 1.0 // 默认质量
+		}
+
+		dataJSON, err := json.Marshal(data)
 		if err != nil {
 			ps.log.Warn("序列化数据失败: %v", err)
 			dataJSON = []byte("{}")
 		}
 
 		rows[i] = []interface{}{
-			sample.Timestamp,
-			sample.SourceID,
-			sample.Protocol,
+			timestamp,
+			sensorID,
+			protocol,
 			dataJSON,
-			sample.Quality,
+			quality,
 		}
 	}
 

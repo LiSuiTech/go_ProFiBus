@@ -2,7 +2,9 @@ package storage
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"go_ProFiBus/internal/domain/datasample"
 	"go_ProFiBus/pkg/interfaces"
 	"go_ProFiBus/storage"
 	"time"
@@ -40,7 +42,7 @@ func (r *TimeSeriesRepositoryImpl) Query(ctx context.Context, query interfaces.Q
 	offset := query.GetOffset()
 
 	// 构建SQL查询
-	sql := "SELECT source_id, timestamp, data, quality FROM sensor_data WHERE 1=1"
+	sql := "SELECT source_id, time as timestamp, data, quality FROM sensor_readings WHERE 1=1"
 	args := make([]interface{}, 0)
 	argIdx := 1
 
@@ -52,22 +54,26 @@ func (r *TimeSeriesRepositoryImpl) Query(ctx context.Context, query interfaces.Q
 	}
 
 	if startTime, ok := filters["start_time"].(time.Time); ok {
-		sql += fmt.Sprintf(" AND timestamp >= $%d", argIdx)
+		sql += fmt.Sprintf(" AND time >= $%d", argIdx)
 		args = append(args, startTime)
 		argIdx++
 	}
 
 	if endTime, ok := filters["end_time"].(time.Time); ok {
-		sql += fmt.Sprintf(" AND timestamp <= $%d", argIdx)
+		sql += fmt.Sprintf(" AND time <= $%d", argIdx)
 		args = append(args, endTime)
 		argIdx++
 	}
 
-	// 排序
+	// 排序（默认按时间排序）
+	orderBy := query.GetOrderBy()
+	if orderBy == "" {
+		orderBy = "time"
+	}
 	if query.GetOrderDesc() {
-		sql += fmt.Sprintf(" ORDER BY %s DESC", query.GetOrderBy())
+		sql += fmt.Sprintf(" ORDER BY %s DESC", orderBy)
 	} else {
-		sql += fmt.Sprintf(" ORDER BY %s ASC", query.GetOrderBy())
+		sql += fmt.Sprintf(" ORDER BY %s ASC", orderBy)
 	}
 
 	// 限制和偏移
@@ -112,9 +118,8 @@ func (r *TimeSeriesRepositoryImpl) Update(ctx context.Context, id string, data i
 
 // Delete 实现 Repository 接口
 func (r *TimeSeriesRepositoryImpl) Delete(ctx context.Context, id string) error {
-	sql := "DELETE FROM sensor_data WHERE id = $1"
-	_, err := r.store.Exec(sql, id)
-	return err
+	// 时序数据通常不按 ID 删除，而是按时间范围删除
+	return fmt.Errorf("delete by id not supported for time series data, use DeleteOldData instead")
 }
 
 // Health 实现 Repository 接口
@@ -136,10 +141,16 @@ func (r *TimeSeriesRepositoryImpl) WriteSamples(ctx context.Context, samples []i
 	// 使用 COPY 批量插入
 	rows := make([][]interface{}, 0, len(samples))
 	for _, sample := range samples {
+		// 序列化数据为 JSON
+		dataJSON, err := json.Marshal(sample.GetData())
+		if err != nil {
+			return fmt.Errorf("序列化数据失败: %w", err)
+		}
+		
 		row := []interface{}{
 			sample.GetSourceID(),
 			sample.GetTimestamp(),
-			sample.GetData(),
+			dataJSON, // JSONB 字段需要 JSON bytes
 			sample.GetQuality(),
 		}
 		rows = append(rows, row)
@@ -147,8 +158,8 @@ func (r *TimeSeriesRepositoryImpl) WriteSamples(ctx context.Context, samples []i
 
 	// 使用 CopyFrom 批量写入
 	copySource := pgx.CopyFromRows(rows)
-	tableName := pgx.Identifier{"sensor_data"}
-	columnNames := []string{"source_id", "timestamp", "data", "quality"}
+	tableName := pgx.Identifier{"sensor_readings"}
+	columnNames := []string{"source_id", "time", "data", "quality"}
 
 	_, err := r.store.CopyFrom(tableName, columnNames, copySource)
 	return err
@@ -161,10 +172,10 @@ func (r *TimeSeriesRepositoryImpl) QueryByTimeRange(
 	start, end time.Time,
 ) ([]interfaces.DataSample, error) {
 	sql := `
-		SELECT source_id, timestamp, data, quality
-		FROM sensor_data
-		WHERE source_id = $1 AND timestamp >= $2 AND timestamp <= $3
-		ORDER BY timestamp ASC
+		SELECT source_id, time as timestamp, data, quality
+		FROM sensor_readings
+		WHERE source_id = $1 AND time >= $2 AND time <= $3
+		ORDER BY time ASC
 	`
 
 	rows, err := r.store.Query(sql, sourceID, start, end)
@@ -174,8 +185,28 @@ func (r *TimeSeriesRepositoryImpl) QueryByTimeRange(
 	defer rows.Close()
 
 	samples := make([]interfaces.DataSample, 0)
-	// 这里需要扫描并创建 DataSample 实例
-	// TODO: 实现行扫描逻辑
+	
+	for rows.Next() {
+		var sourceID string
+		var timestamp time.Time
+		var dataJSON []byte
+		var quality float64
+
+		if err := rows.Scan(&sourceID, &timestamp, &dataJSON, &quality); err != nil {
+			return nil, fmt.Errorf("扫描行失败: %w", err)
+		}
+
+		// 解析 JSON 数据
+		var data map[string]interface{}
+		if err := json.Unmarshal(dataJSON, &data); err != nil {
+			return nil, fmt.Errorf("解析数据 JSON 失败: %w", err)
+		}
+
+		// 创建 DataSample 实例
+		sample := datasample.NewDataSampleWithTime(sourceID, timestamp, data)
+		sample.SetQuality(quality)
+		samples = append(samples, sample)
+	}
 
 	return samples, rows.Err()
 }
@@ -187,10 +218,10 @@ func (r *TimeSeriesRepositoryImpl) QueryLatest(
 	limit int,
 ) ([]interfaces.DataSample, error) {
 	sql := `
-		SELECT source_id, timestamp, data, quality
-		FROM sensor_data
+		SELECT source_id, time as timestamp, data, quality
+		FROM sensor_readings
 		WHERE source_id = $1
-		ORDER BY timestamp DESC
+		ORDER BY time DESC
 		LIMIT $2
 	`
 
@@ -201,7 +232,28 @@ func (r *TimeSeriesRepositoryImpl) QueryLatest(
 	defer rows.Close()
 
 	samples := make([]interfaces.DataSample, 0)
-	// TODO: 实现行扫描逻辑
+	
+	for rows.Next() {
+		var sourceID string
+		var timestamp time.Time
+		var dataJSON []byte
+		var quality float64
+
+		if err := rows.Scan(&sourceID, &timestamp, &dataJSON, &quality); err != nil {
+			return nil, fmt.Errorf("扫描行失败: %w", err)
+		}
+
+		// 解析 JSON 数据
+		var data map[string]interface{}
+		if err := json.Unmarshal(dataJSON, &data); err != nil {
+			return nil, fmt.Errorf("解析数据 JSON 失败: %w", err)
+		}
+
+		// 创建 DataSample 实例
+		sample := datasample.NewDataSampleWithTime(sourceID, timestamp, data)
+		sample.SetQuality(quality)
+		samples = append(samples, sample)
+	}
 
 	return samples, rows.Err()
 }
@@ -220,11 +272,11 @@ func (r *TimeSeriesRepositoryImpl) Aggregate(
 	// 使用 time_bucket 进行时间分组（TimescaleDB功能）
 	sql := fmt.Sprintf(`
 		SELECT
-			time_bucket($1, timestamp) AS bucket,
+			time_bucket($1, time) AS bucket,
 			%s(CAST(data->>'value' AS DOUBLE PRECISION)) AS agg_value,
 			COUNT(*) AS count
-		FROM sensor_data
-		WHERE source_id = $2 AND timestamp >= $3 AND timestamp <= $4
+		FROM sensor_readings
+		WHERE source_id = $2 AND time >= $3 AND time <= $4
 		GROUP BY bucket
 		ORDER BY bucket ASC
 	`, aggFunc)
@@ -257,7 +309,7 @@ func (r *TimeSeriesRepositoryImpl) Aggregate(
 
 // DeleteOldData 实现 TimeSeriesRepository 接口
 func (r *TimeSeriesRepositoryImpl) DeleteOldData(ctx context.Context, before time.Time) error {
-	sql := "DELETE FROM sensor_data WHERE timestamp < $1"
+	sql := "DELETE FROM sensor_readings WHERE time < $1"
 	_, err := r.store.Exec(sql, before)
 	return err
 }
