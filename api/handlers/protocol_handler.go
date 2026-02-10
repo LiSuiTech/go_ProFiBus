@@ -253,7 +253,7 @@ func (h *ProtocolHandler) createProtocolByType(protocolType interfaces.ProtocolT
 		if err := json.Unmarshal(configData, &config); err != nil {
 			return nil, nil, err
 		}
-		instance, err := serial.NewModbus(&config)
+		instance, err := serial.NewModbusMaster(&config)
 		return instance, &config, err
 
 	case interfaces.ProtocolPROFIBUS:
@@ -309,16 +309,16 @@ func (h *ProtocolHandler) createProtocolByType(protocolType interfaces.ProtocolT
 		if err := json.Unmarshal(configData, &config); err != nil {
 			return nil, nil, err
 		}
-		instance, err := serial.NewOPCUA(&config)
-		return instance, &config, err
+		instance := serial.NewOPCUA(&config)
+		return instance, &config, nil
 
 	case interfaces.ProtocolMQTT:
 		var config serial.MQTTConfig
 		if err := json.Unmarshal(configData, &config); err != nil {
 			return nil, nil, err
 		}
-		instance, err := serial.NewMQTT(&config)
-		return instance, &config, err
+		instance := serial.NewMQTT(&config)
+		return instance, &config, nil
 
 	case interfaces.ProtocolHTTP:
 		var config serial.RestAPIConfig

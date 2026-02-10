@@ -4,7 +4,6 @@ import (
 	"net/http"
 
 	"go_ProFiBus/internal/application/orchestrator"
-	"go_ProFiBus/pkg/interfaces"
 
 	"github.com/gin-gonic/gin"
 )
@@ -128,13 +127,13 @@ func (h *PipelineHandler) extractComponents(pipeline *orchestrator.Pipeline) Pip
 		Sinks:      make([]ComponentInfo, 0),
 	}
 
-	// 提取 Source 信息
+	// 提取 Source 信息（DataSource 接口无 GetDescription，用名称作为描述）
 	if source := pipeline.GetSource(); source != nil {
 		components.Source = ComponentInfo{
 			ID:          source.GetID(),
 			Name:        source.GetName(),
 			Type:        "source",
-			Description: source.GetDescription(),
+			Description: source.GetName(),
 		}
 	}
 
@@ -147,11 +146,12 @@ func (h *PipelineHandler) extractComponents(pipeline *orchestrator.Pipeline) Pip
 		})
 	}
 
-	// 提取 Analyzers 信息
+	// 提取 Analyzers 信息（Analyzer 接口仅有 GetName，用名称同时作为 ID）
 	for _, analyzer := range pipeline.GetAnalyzers() {
+		name := analyzer.GetName()
 		components.Analyzers = append(components.Analyzers, ComponentInfo{
-			ID:   analyzer.GetID(),
-			Name: analyzer.GetName(),
+			ID:   name,
+			Name: name,
 			Type: "analyzer",
 		})
 	}

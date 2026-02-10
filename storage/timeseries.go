@@ -4,11 +4,19 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"go_ProFiBus/pkg/interfaces"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 )
+
+// SensorReading 传感器单条读数（用于 WriteSensorReading/QuerySensorReadings，替代已移除的 collector 包）
+type SensorReading struct {
+	Timestamp  time.Time
+	SourceID   string
+	Protocol   string
+	ParsedData map[string]interface{}
+	Quality    float64
+}
 
 // WriteSensorReadings 批量写入传感器数据
 func (ps *PostgresStore) WriteSensorReadings(readings []map[string]interface{}) error {
@@ -67,7 +75,7 @@ func (ps *PostgresStore) WriteSensorReadings(readings []map[string]interface{}) 
 }
 
 // WriteSensorReading 写入单个传感器数据
-func (ps *PostgresStore) WriteSensorReading(sample *collector.DataSample) error {
+func (ps *PostgresStore) WriteSensorReading(sample *SensorReading) error {
 	dataJSON, err := json.Marshal(sample.ParsedData)
 	if err != nil {
 		return fmt.Errorf("序列化数据失败: %w", err)
@@ -94,28 +102,34 @@ func (ps *PostgresStore) WriteSensorReading(sample *collector.DataSample) error 
 	return nil
 }
 
-// QuerySensorReadings 查询传感器数据
+// QuerySensorReadings 查询传感器数据。limit <= 0 表示不限制条数。
 func (ps *PostgresStore) QuerySensorReadings(
 	sensorID string,
 	start, end time.Time,
-) ([]*collector.DataSample, error) {
+	limit int,
+) ([]*SensorReading, error) {
 	query := `
 		SELECT time, sensor_id, protocol, data, quality
 		FROM sensor_readings
 		WHERE sensor_id = $1 AND time >= $2 AND time < $3
 		ORDER BY time ASC
 	`
+	args := []interface{}{sensorID, start, end}
+	if limit > 0 {
+		query += " LIMIT $4"
+		args = append(args, limit)
+	}
 
-	rows, err := ps.Query(query, sensorID, start, end)
+	rows, err := ps.Query(query, args...)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	samples := make([]*collector.DataSample, 0)
+	samples := make([]*SensorReading, 0)
 
 	for rows.Next() {
-		var sample collector.DataSample
+		var sample SensorReading
 		var dataJSON []byte
 
 		err := rows.Scan(
@@ -150,7 +164,7 @@ func (ps *PostgresStore) QuerySensorReadings(
 func (ps *PostgresStore) QuerySensorReadingsLatest(
 	sensorID string,
 	limit int,
-) ([]*collector.DataSample, error) {
+) ([]*SensorReading, error) {
 	query := `
 		SELECT time, sensor_id, protocol, data, quality
 		FROM sensor_readings
@@ -165,10 +179,10 @@ func (ps *PostgresStore) QuerySensorReadingsLatest(
 	}
 	defer rows.Close()
 
-	samples := make([]*collector.DataSample, 0, limit)
+	samples := make([]*SensorReading, 0, limit)
 
 	for rows.Next() {
-		var sample collector.DataSample
+		var sample SensorReading
 		var dataJSON []byte
 
 		err := rows.Scan(

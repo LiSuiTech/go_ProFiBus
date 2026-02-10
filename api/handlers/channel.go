@@ -60,7 +60,7 @@ func (h *ChannelHandler) GetChannels(c *gin.Context) {
 // @Tags channels
 // @Produce json
 // @Param id path string true "Channel ID"
-// @Success 200 {object} channel.Channel
+// @Success 200 {object} channelDomain.Channel
 // @Router /api/v1/channels/{id} [get]
 func (h *ChannelHandler) GetChannel(c *gin.Context) {
 	id := c.Param("id")
@@ -79,11 +79,11 @@ func (h *ChannelHandler) GetChannel(c *gin.Context) {
 // @Tags channels
 // @Accept json
 // @Produce json
-// @Param channel body channel.Channel true "Channel"
-// @Success 201 {object} channel.Channel
+// @Param channel body channelDomain.Channel true "Channel"
+// @Success 201 {object} channelDomain.Channel
 // @Router /api/v1/channels [post]
 func (h *ChannelHandler) CreateChannel(c *gin.Context) {
-	var ch channel.Channel
+	var ch channelDomain.Channel
 	if err := c.ShouldBindJSON(&ch); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -111,13 +111,13 @@ func (h *ChannelHandler) CreateChannel(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param id path string true "Channel ID"
-// @Param channel body channel.Channel true "Channel"
-// @Success 200 {object} channel.Channel
+// @Param channel body channelDomain.Channel true "Channel"
+// @Success 200 {object} channelDomain.Channel
 // @Router /api/v1/channels/{id} [put]
 func (h *ChannelHandler) UpdateChannel(c *gin.Context) {
 	id := c.Param("id")
 
-	var ch channel.Channel
+	var ch channelDomain.Channel
 	if err := c.ShouldBindJSON(&ch); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -238,13 +238,13 @@ func (h *ChannelHandler) GetChannelPoints(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param id path string true "Channel ID"
-// @Param point body channel.Point true "Point"
-// @Success 201 {object} channel.Point
+// @Param point body channelDomain.Point true "Point"
+// @Success 201 {object} channelDomain.Point
 // @Router /api/v1/channels/{id}/points [post]
 func (h *ChannelHandler) CreatePoint(c *gin.Context) {
 	channelID := c.Param("id")
 
-	var point channel.Point
+	var point channelDomain.Point
 	if err := c.ShouldBindJSON(&point); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -273,13 +273,13 @@ func (h *ChannelHandler) CreatePoint(c *gin.Context) {
 // @Produce json
 // @Param id path string true "Channel ID"
 // @Param point_id path string true "Point ID"
-// @Param point body channel.Point true "Point"
-// @Success 200 {object} channel.Point
+// @Param point body channelDomain.Point true "Point"
+// @Success 200 {object} channelDomain.Point
 // @Router /api/v1/channels/{id}/points/{point_id} [put]
 func (h *ChannelHandler) UpdatePoint(c *gin.Context) {
 	pointID := c.Param("point_id")
 
-	var point channel.Point
+	var point channelDomain.Point
 	if err := c.ShouldBindJSON(&point); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return

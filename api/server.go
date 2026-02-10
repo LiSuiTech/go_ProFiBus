@@ -6,7 +6,6 @@ import (
 	"go_ProFiBus/api/handlers"
 	"go_ProFiBus/api/middleware"
 	deviceApp "go_ProFiBus/internal/application/device"
-	deviceDomain "go_ProFiBus/internal/domain/device"
 	dataManagementApp "go_ProFiBus/internal/application/datamanagement"
 	fusionApp "go_ProFiBus/internal/application/fusion"
 	controlApp "go_ProFiBus/internal/application/control"
@@ -14,7 +13,7 @@ import (
 	ruleTemplateApp "go_ProFiBus/internal/application/rule_template"
 	"go_ProFiBus/internal/application/orchestrator"
 	"go_ProFiBus/internal/application/workflow"
-	"go_ProFiBus/internal/domain/config"
+	configDomain "go_ProFiBus/internal/domain/config"
 	"go_ProFiBus/internal/infrastructure/storage"
 	websocket "go_ProFiBus/internal/interfaces/websocket"
 	"go_ProFiBus/logger"
@@ -61,7 +60,7 @@ type Server struct {
 	tracer           interfaces.Tracer
 	traceRepository  interfaces.TraceRepository
 	configRepository interfaces.ConfigRepository
-	configValidator  *config.Validator
+	configValidator  *configDomain.Validator
 	userRepository   interfaces.UserRepository
 	authService      interfaces.AuthService
 	authzService     interfaces.AuthorizationService
@@ -121,7 +120,7 @@ func NewServer(
 	ctx, cancel := context.WithCancel(context.Background())
 
 	// Create config validator
-	configValidator := config.NewValidator()
+	configValidator := configDomain.NewValidator()
 
 	server := &Server{
 		config:           config,
@@ -248,7 +247,7 @@ func (s *Server) registerRoutes() {
 	// 创建数据管理handler
 	dataManagementRepo := storage.NewDataManagementRepository(s.store)
 	cleaningService := dataManagementApp.NewDataCleaningService(dataManagementRepo)
-	archiveService := dataManagementApp.NewDataArchiveService(dataManagementRepo, s.store, "archive")
+	archiveService := dataManagementApp.NewDataArchiveService(dataManagementRepo, nil, "archive")
 	dataManagementHandler := handlers.NewDataManagementHandler(dataManagementRepo, cleaningService, archiveService)
 
 	// 创建设备控制handler
@@ -769,7 +768,7 @@ func (s *Server) handleHealth(c *gin.Context) {
 	// 检查数据库连接
 	dbHealthy := true
 	if s.store != nil {
-		if err := s.store.Health(); err != nil {
+		if err := s.store.Ping(); err != nil {
 			dbHealthy = false
 		}
 	}

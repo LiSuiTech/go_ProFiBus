@@ -100,7 +100,7 @@ func (r *PredictionRepositoryImpl) GetPredictionByID(ctx context.Context, id str
 	prediction.PredictionType = predictionDomain.PredictionType(predictionType)
 
 	if err := json.Unmarshal(metadataJSON, &prediction.Metadata); err != nil {
-		r.store.log.Warn("反序列化元数据失败: %v", err)
+		r.store.Log().Warn("反序列化元数据失败: %v", err)
 		prediction.Metadata = make(map[string]interface{})
 	}
 
@@ -200,14 +200,14 @@ func (r *PredictionRepositoryImpl) ListPredictions(ctx context.Context, filters 
 			&metadataJSON,
 		)
 		if err != nil {
-			r.store.log.Warn("扫描预测结果失败: %v", err)
+			r.store.Log().Warn("扫描预测结果失败: %v", err)
 			continue
 		}
 
 		prediction.PredictionType = predictionDomain.PredictionType(predictionType)
 
 		if err := json.Unmarshal(metadataJSON, &prediction.Metadata); err != nil {
-			r.store.log.Warn("反序列化元数据失败: %v", err)
+			r.store.Log().Warn("反序列化元数据失败: %v", err)
 			prediction.Metadata = make(map[string]interface{})
 		}
 
@@ -303,7 +303,7 @@ func (r *PredictionRepositoryImpl) GetModelByID(ctx context.Context, id string) 
 	model.Status = predictionDomain.ModelStatus(status)
 
 	if err := json.Unmarshal(metadataJSON, &model.Metadata); err != nil {
-		r.store.log.Warn("反序列化元数据失败: %v", err)
+		r.store.Log().Warn("反序列化元数据失败: %v", err)
 		model.Metadata = make(map[string]interface{})
 	}
 
@@ -377,7 +377,7 @@ func (r *PredictionRepositoryImpl) ListModels(ctx context.Context, filters inter
 			&metadataJSON,
 		)
 		if err != nil {
-			r.store.log.Warn("扫描预测模型失败: %v", err)
+			r.store.Log().Warn("扫描预测模型失败: %v", err)
 			continue
 		}
 
@@ -385,7 +385,7 @@ func (r *PredictionRepositoryImpl) ListModels(ctx context.Context, filters inter
 		model.Status = predictionDomain.ModelStatus(status)
 
 		if err := json.Unmarshal(metadataJSON, &model.Metadata); err != nil {
-			r.store.log.Warn("反序列化元数据失败: %v", err)
+			r.store.Log().Warn("反序列化元数据失败: %v", err)
 			model.Metadata = make(map[string]interface{})
 		}
 

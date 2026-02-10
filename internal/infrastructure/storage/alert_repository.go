@@ -104,7 +104,7 @@ func (r *AlertRepositoryImpl) GetAlertByID(ctx context.Context, id string) (*ale
 	alert.Status = alertDomain.AlertStatus(status)
 
 	if err := json.Unmarshal(detailsJSON, &alert.Details); err != nil {
-		r.store.log.Warn("反序列化详情失败: %v", err)
+		r.store.Log().Warn("反序列化详情失败: %v", err)
 		alert.Details = make(map[string]interface{})
 	}
 
@@ -214,7 +214,7 @@ func (r *AlertRepositoryImpl) ListAlerts(ctx context.Context, filters interfaces
 			&alert.UpdatedAt,
 		)
 		if err != nil {
-			r.store.log.Warn("扫描告警失败: %v", err)
+			r.store.Log().Warn("扫描告警失败: %v", err)
 			continue
 		}
 
@@ -222,7 +222,7 @@ func (r *AlertRepositoryImpl) ListAlerts(ctx context.Context, filters interfaces
 		alert.Status = alertDomain.AlertStatus(status)
 
 		if err := json.Unmarshal(detailsJSON, &alert.Details); err != nil {
-			r.store.log.Warn("反序列化详情失败: %v", err)
+			r.store.Log().Warn("反序列化详情失败: %v", err)
 			alert.Details = make(map[string]interface{})
 		}
 
@@ -486,7 +486,7 @@ func (r *AlertRepositoryImpl) GetAlertRuleByID(ctx context.Context, id string) (
 	rule.Level = alertDomain.AlertLevel(level)
 
 	if err := json.Unmarshal(conditionJSON, &rule.Condition); err != nil {
-		r.store.log.Warn("反序列化条件失败: %v", err)
+		r.store.Log().Warn("反序列化条件失败: %v", err)
 		rule.Condition = make(map[string]interface{})
 	}
 
@@ -535,14 +535,14 @@ func (r *AlertRepositoryImpl) ListAlertRules(ctx context.Context, enabled *bool)
 			&rule.UpdatedAt,
 		)
 		if err != nil {
-			r.store.log.Warn("扫描告警规则失败: %v", err)
+			r.store.Log().Warn("扫描告警规则失败: %v", err)
 			continue
 		}
 
 		rule.Level = alertDomain.AlertLevel(level)
 
 		if err := json.Unmarshal(conditionJSON, &rule.Condition); err != nil {
-			r.store.log.Warn("反序列化条件失败: %v", err)
+			r.store.Log().Warn("反序列化条件失败: %v", err)
 			rule.Condition = make(map[string]interface{})
 		}
 

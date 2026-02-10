@@ -7,8 +7,8 @@
 # 3. Speed up builds with layer caching
 # ============================================
 
-# Stage 1: Build the Go application
-FROM golang:1.22-alpine AS builder
+# Stage 1: Build the Go application（与 go.mod 中 go 1.24.0 一致）
+FROM golang:1.24-alpine AS builder
 
 # Install build dependencies
 RUN apk add --no-cache \
@@ -30,6 +30,12 @@ RUN go mod download
 
 # Copy source code
 COPY . .
+
+# 补全 go.sum 中可能缺失的间接依赖（避免 build 时报 missing go.sum entry）
+RUN go mod tidy
+
+# 准备 configs 目录（项目根目录仅有 config.yaml，运行时挂载或使用默认配置）
+RUN mkdir -p /build/configs && cp /build/config.yaml /build/configs/ 2>/dev/null || true
 
 # Build the application
 # CGO_ENABLED=0: Build static binary
@@ -53,8 +59,8 @@ WORKDIR /frontend
 # Copy package files
 COPY web/dashboard/package*.json ./
 
-# Install dependencies
-RUN npm ci --only=production
+# 安装依赖（含 devDependencies，构建需要 vite/typescript 等；无 package-lock.json 时用 npm install）
+RUN npm install
 
 # Copy frontend source
 COPY web/dashboard/ ./

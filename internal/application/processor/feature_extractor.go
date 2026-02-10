@@ -7,7 +7,6 @@ import (
 	"sync"
 	"time"
 
-	"go_ProFiBus/inference"
 	"go_ProFiBus/pkg/interfaces"
 )
 
@@ -229,8 +228,8 @@ func (fe *FeatureExtractor) Process(ctx context.Context, input interfaces.DataSa
 	metadata["features"] = featureVector
 	metadata["feature_count"] = len(featureVector.Data)
 
-	// 4. 创建增强的样本
-	enrichedSample := &dataSampleImpl{
+	// 4. 创建增强的样本（使用与 fusion_processor 一致的简单实现）
+	enrichedSample := &featureSampleImpl{
 		timestamp: input.GetTimestamp(),
 		sourceID:  input.GetSourceID(),
 		data:      input.GetData(),
@@ -299,6 +298,21 @@ func (fe *FeatureExtractor) addToHistory(sample interfaces.DataSample) {
 		fe.historyBuffer = fe.historyBuffer[i:]
 	}
 }
+
+// featureSampleImpl 用于 Process 返回的 DataSample 实现（避免与 fusion_processor.simpleDataSample 重名）
+type featureSampleImpl struct {
+	timestamp time.Time
+	sourceID  string
+	data      map[string]interface{}
+	quality   float64
+	metadata  map[string]interface{}
+}
+
+func (s *featureSampleImpl) GetTimestamp() time.Time              { return s.timestamp }
+func (s *featureSampleImpl) GetSourceID() string                   { return s.sourceID }
+func (s *featureSampleImpl) GetData() map[string]interface{}       { return s.data }
+func (s *featureSampleImpl) GetQuality() float64                   { return s.quality }
+func (s *featureSampleImpl) GetMetadata() map[string]interface{}   { return s.metadata }
 
 // GetName 获取处理器名称 - 实现 Processor 接口
 func (fe *FeatureExtractor) GetName() string {

@@ -107,17 +107,17 @@ func (r *ControlRepositoryImpl) GetControlPolicyByID(ctx context.Context, id str
 	}
 
 	if err := json.Unmarshal(conditionJSON, &policy.ConditionConfig); err != nil {
-		r.store.log.Warn("反序列化条件配置失败: %v", err)
+		r.store.Log().Warn("反序列化条件配置失败: %v", err)
 		policy.ConditionConfig = make(map[string]interface{})
 	}
 
 	if err := json.Unmarshal(actionJSON, &policy.ActionConfig); err != nil {
-		r.store.log.Warn("反序列化动作配置失败: %v", err)
+		r.store.Log().Warn("反序列化动作配置失败: %v", err)
 		policy.ActionConfig = make(map[string]interface{})
 	}
 
 	if err := json.Unmarshal(metadataJSON, &policy.Metadata); err != nil {
-		r.store.log.Warn("反序列化元数据失败: %v", err)
+		r.store.Log().Warn("反序列化元数据失败: %v", err)
 		policy.Metadata = make(map[string]interface{})
 	}
 
@@ -185,22 +185,22 @@ func (r *ControlRepositoryImpl) ListControlPolicies(ctx context.Context, filters
 			&policy.UpdatedAt,
 		)
 		if err != nil {
-			r.store.log.Warn("扫描控制策略失败: %v", err)
+			r.store.Log().Warn("扫描控制策略失败: %v", err)
 			continue
 		}
 
 		if err := json.Unmarshal(conditionJSON, &policy.ConditionConfig); err != nil {
-			r.store.log.Warn("反序列化条件配置失败: %v", err)
+			r.store.Log().Warn("反序列化条件配置失败: %v", err)
 			policy.ConditionConfig = make(map[string]interface{})
 		}
 
 		if err := json.Unmarshal(actionJSON, &policy.ActionConfig); err != nil {
-			r.store.log.Warn("反序列化动作配置失败: %v", err)
+			r.store.Log().Warn("反序列化动作配置失败: %v", err)
 			policy.ActionConfig = make(map[string]interface{})
 		}
 
 		if err := json.Unmarshal(metadataJSON, &policy.Metadata); err != nil {
-			r.store.log.Warn("反序列化元数据失败: %v", err)
+			r.store.Log().Warn("反序列化元数据失败: %v", err)
 			policy.Metadata = make(map[string]interface{})
 		}
 
@@ -375,19 +375,19 @@ func (r *ControlRepositoryImpl) GetControlActionByID(ctx context.Context, id str
 	action.Status = controlDomain.ActionStatus(status)
 
 	if err := json.Unmarshal(parametersJSON, &action.Parameters); err != nil {
-		r.store.log.Warn("反序列化参数失败: %v", err)
+		r.store.Log().Warn("反序列化参数失败: %v", err)
 		action.Parameters = make(map[string]interface{})
 	}
 
 	if len(resultJSON) > 0 {
 		if err := json.Unmarshal(resultJSON, &action.Result); err != nil {
-			r.store.log.Warn("反序列化结果失败: %v", err)
+			r.store.Log().Warn("反序列化结果失败: %v", err)
 			action.Result = make(map[string]interface{})
 		}
 	}
 
 	if err := json.Unmarshal(metadataJSON, &action.Metadata); err != nil {
-		r.store.log.Warn("反序列化元数据失败: %v", err)
+		r.store.Log().Warn("反序列化元数据失败: %v", err)
 		action.Metadata = make(map[string]interface{})
 	}
 
@@ -497,7 +497,7 @@ func (r *ControlRepositoryImpl) ListControlActions(ctx context.Context, filters 
 			&action.CreatedAt,
 		)
 		if err != nil {
-			r.store.log.Warn("扫描控制动作失败: %v", err)
+			r.store.Log().Warn("扫描控制动作失败: %v", err)
 			continue
 		}
 
@@ -505,19 +505,19 @@ func (r *ControlRepositoryImpl) ListControlActions(ctx context.Context, filters 
 		action.Status = controlDomain.ActionStatus(status)
 
 		if err := json.Unmarshal(parametersJSON, &action.Parameters); err != nil {
-			r.store.log.Warn("反序列化参数失败: %v", err)
+			r.store.Log().Warn("反序列化参数失败: %v", err)
 			action.Parameters = make(map[string]interface{})
 		}
 
 		if len(resultJSON) > 0 {
 			if err := json.Unmarshal(resultJSON, &action.Result); err != nil {
-				r.store.log.Warn("反序列化结果失败: %v", err)
+				r.store.Log().Warn("反序列化结果失败: %v", err)
 				action.Result = make(map[string]interface{})
 			}
 		}
 
 		if err := json.Unmarshal(metadataJSON, &action.Metadata); err != nil {
-			r.store.log.Warn("反序列化元数据失败: %v", err)
+			r.store.Log().Warn("反序列化元数据失败: %v", err)
 			action.Metadata = make(map[string]interface{})
 		}
 
@@ -680,14 +680,14 @@ func (r *ControlRepositoryImpl) GetAuditLogs(ctx context.Context, filters interf
 			&log.CreatedAt,
 		)
 		if err != nil {
-			r.store.log.Warn("扫描审计日志失败: %v", err)
+			r.store.Log().Warn("扫描审计日志失败: %v", err)
 			continue
 		}
 
 		log.EventType = controlDomain.AuditEventType(eventType)
 
 		if err := json.Unmarshal(detailsJSON, &log.Details); err != nil {
-			r.store.log.Warn("反序列化详细信息失败: %v", err)
+			r.store.Log().Warn("反序列化详细信息失败: %v", err)
 			log.Details = make(map[string]interface{})
 		}
 
@@ -770,7 +770,7 @@ func (r *ControlRepositoryImpl) GetControlPermission(ctx context.Context, userID
 	}
 
 	if err := json.Unmarshal(timeRangesJSON, &permission.AllowedTimeRanges); err != nil {
-		r.store.log.Warn("反序列化时间范围失败: %v", err)
+		r.store.Log().Warn("反序列化时间范围失败: %v", err)
 		permission.AllowedTimeRanges = make([]controlDomain.TimeRange, 0)
 	}
 
@@ -845,12 +845,12 @@ func (r *ControlRepositoryImpl) ListControlPermissions(ctx context.Context, filt
 			&permission.UpdatedAt,
 		)
 		if err != nil {
-			r.store.log.Warn("扫描控制权限失败: %v", err)
+			r.store.Log().Warn("扫描控制权限失败: %v", err)
 			continue
 		}
 
 		if err := json.Unmarshal(timeRangesJSON, &permission.AllowedTimeRanges); err != nil {
-			r.store.log.Warn("反序列化时间范围失败: %v", err)
+			r.store.Log().Warn("反序列化时间范围失败: %v", err)
 			permission.AllowedTimeRanges = make([]controlDomain.TimeRange, 0)
 		}
 

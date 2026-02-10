@@ -189,14 +189,12 @@ func (pb *PROFIBUS) Open(devicePath string) error {
 	}
 
 	serialPort := &RealSerialPort{}
-	portConfig := PortConfig{
-		BaudRate: pb.config.BaudRate,
-		DataBits: 8,
-		StopBits: 1,
-		Parity:   "E", // PROFIBUS使用偶校验
-	}
-
-	err := serialPort.OpenWithConfig(port, portConfig)
+	err := serialPort.Open(port,
+		WithBaudRate(pb.config.BaudRate),
+		WithDataBits(8),
+		WithStopBits(1),
+		WithParity(ParityEven), // PROFIBUS 常用偶校验
+	)
 	if err != nil {
 		return fmt.Errorf("failed to open serial port: %w", err)
 	}
@@ -429,7 +427,7 @@ func (pb *PROFIBUS) performCycle() {
 		slave.LastUpdate = time.Now()
 
 		// 检测变化并发送更新
-		if !bytesEqual(oldData, newData) {
+		if !bytesEqualPB(oldData, newData) {
 			update := &interfaces.DataUpdate{
 				TargetID:  fmt.Sprintf("slave_%d", addr),
 				Value:     newData,
@@ -735,7 +733,7 @@ func (pb *PROFIBUS) GetAllSlaves() map[byte]*SlaveInfo {
 }
 
 // bytesEqual 比较两个字节数组是否相等
-func bytesEqual(a, b []byte) bool {
+func bytesEqualPB(a, b []byte) bool {
 	if len(a) != len(b) {
 		return false
 	}

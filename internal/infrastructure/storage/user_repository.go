@@ -26,7 +26,7 @@ func NewUserRepository(store *PostgresStore) *UserRepository {
 func (r *UserRepository) CreateUser(ctx context.Context, user *interfaces.User) error {
 	// Check if user already exists
 	var exists bool
-	err := r.store.pool.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM users WHERE username = $1)", user.Username).Scan(&exists)
+	err := r.store.GetPool().QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM users WHERE username = $1)", user.Username).Scan(&exists)
 	if err != nil {
 		return fmt.Errorf("failed to check user existence: %w", err)
 	}
@@ -39,7 +39,7 @@ func (r *UserRepository) CreateUser(ctx context.Context, user *interfaces.User) 
 		VALUES ($1, $2, $3, $4, $5, $6)
 	`
 
-	_, err = r.store.pool.Exec(ctx, query,
+	_, err = r.store.GetPool().Exec(ctx, query,
 		user.ID,
 		user.Username,
 		user.Email,
@@ -71,7 +71,7 @@ func (r *UserRepository) GetUser(ctx context.Context, id string) (*interfaces.Us
 	`
 
 	var user interfaces.User
-	err := r.store.pool.QueryRow(ctx, query, id).Scan(
+	err := r.store.GetPool().QueryRow(ctx, query, id).Scan(
 		&user.ID,
 		&user.Username,
 		&user.Email,
@@ -108,7 +108,7 @@ func (r *UserRepository) GetUserByUsername(ctx context.Context, username string)
 	`
 
 	var user interfaces.User
-	err := r.store.pool.QueryRow(ctx, query, username).Scan(
+	err := r.store.GetPool().QueryRow(ctx, query, username).Scan(
 		&user.ID,
 		&user.Username,
 		&user.Email,
@@ -145,7 +145,7 @@ func (r *UserRepository) GetUserByEmail(ctx context.Context, email string) (*int
 	`
 
 	var user interfaces.User
-	err := r.store.pool.QueryRow(ctx, query, email).Scan(
+	err := r.store.GetPool().QueryRow(ctx, query, email).Scan(
 		&user.ID,
 		&user.Username,
 		&user.Email,
@@ -188,7 +188,7 @@ func (r *UserRepository) ListUsers(ctx context.Context, enabled *bool) ([]*inter
 
 	query += " ORDER BY created_at DESC"
 
-	rows, err := r.store.pool.Query(ctx, query, args...)
+	rows, err := r.store.GetPool().Query(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list users: %w", err)
 	}
@@ -232,7 +232,7 @@ func (r *UserRepository) UpdateUser(ctx context.Context, user *interfaces.User) 
 		WHERE id = $1
 	`
 
-	result, err := r.store.pool.Exec(ctx, query,
+	result, err := r.store.GetPool().Exec(ctx, query,
 		user.ID,
 		user.Email,
 		user.FullName,
@@ -248,7 +248,7 @@ func (r *UserRepository) UpdateUser(ctx context.Context, user *interfaces.User) 
 	}
 
 	// Update roles - remove all existing roles and reassign
-	if _, err := r.store.pool.Exec(ctx, "DELETE FROM user_roles WHERE user_id = $1", user.ID); err != nil {
+	if _, err := r.store.GetPool().Exec(ctx, "DELETE FROM user_roles WHERE user_id = $1", user.ID); err != nil {
 		return fmt.Errorf("failed to remove old roles: %w", err)
 	}
 
@@ -264,7 +264,7 @@ func (r *UserRepository) UpdateUser(ctx context.Context, user *interfaces.User) 
 // DeleteUser deletes a user
 func (r *UserRepository) DeleteUser(ctx context.Context, id string) error {
 	query := "DELETE FROM users WHERE id = $1"
-	result, err := r.store.pool.Exec(ctx, query, id)
+	result, err := r.store.GetPool().Exec(ctx, query, id)
 	if err != nil {
 		return fmt.Errorf("failed to delete user: %w", err)
 	}
@@ -279,7 +279,7 @@ func (r *UserRepository) DeleteUser(ctx context.Context, id string) error {
 // ChangePassword updates a user's password
 func (r *UserRepository) ChangePassword(ctx context.Context, userID string, passwordHash string) error {
 	query := "UPDATE users SET password_hash = $2 WHERE id = $1"
-	result, err := r.store.pool.Exec(ctx, query, userID, passwordHash)
+	result, err := r.store.GetPool().Exec(ctx, query, userID, passwordHash)
 	if err != nil {
 		return fmt.Errorf("failed to change password: %w", err)
 	}
@@ -294,7 +294,7 @@ func (r *UserRepository) ChangePassword(ctx context.Context, userID string, pass
 // UpdateLastLogin updates the last login timestamp for a user
 func (r *UserRepository) UpdateLastLogin(ctx context.Context, userID string) error {
 	query := "UPDATE users SET last_login_at = CURRENT_TIMESTAMP WHERE id = $1"
-	_, err := r.store.pool.Exec(ctx, query, userID)
+	_, err := r.store.GetPool().Exec(ctx, query, userID)
 	if err != nil {
 		return fmt.Errorf("failed to update last login: %w", err)
 	}
@@ -306,7 +306,7 @@ func (r *UserRepository) UpdateLastLogin(ctx context.Context, userID string) err
 // CreateRole creates a new role
 func (r *UserRepository) CreateRole(ctx context.Context, role *interfaces.Role) error {
 	var exists bool
-	err := r.store.pool.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM roles WHERE name = $1)", role.Name).Scan(&exists)
+	err := r.store.GetPool().QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM roles WHERE name = $1)", role.Name).Scan(&exists)
 	if err != nil {
 		return fmt.Errorf("failed to check role existence: %w", err)
 	}
@@ -319,7 +319,7 @@ func (r *UserRepository) CreateRole(ctx context.Context, role *interfaces.Role) 
 		VALUES ($1, $2, $3, $4)
 	`
 
-	_, err = r.store.pool.Exec(ctx, query,
+	_, err = r.store.GetPool().Exec(ctx, query,
 		role.ID,
 		role.Name,
 		role.Description,
@@ -342,7 +342,7 @@ func (r *UserRepository) GetRole(ctx context.Context, id string) (*interfaces.Ro
 	`
 
 	var role interfaces.Role
-	err := r.store.pool.QueryRow(ctx, query, id).Scan(
+	err := r.store.GetPool().QueryRow(ctx, query, id).Scan(
 		&role.ID,
 		&role.Name,
 		&role.Description,
@@ -369,7 +369,7 @@ func (r *UserRepository) ListRoles(ctx context.Context) ([]*interfaces.Role, err
 		ORDER BY name
 	`
 
-	rows, err := r.store.pool.Query(ctx, query)
+	rows, err := r.store.GetPool().Query(ctx, query)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list roles: %w", err)
 	}
@@ -404,7 +404,7 @@ func (r *UserRepository) UpdateRole(ctx context.Context, role *interfaces.Role) 
 		WHERE id = $1
 	`
 
-	result, err := r.store.pool.Exec(ctx, query,
+	result, err := r.store.GetPool().Exec(ctx, query,
 		role.ID,
 		role.Name,
 		role.Description,
@@ -425,7 +425,7 @@ func (r *UserRepository) UpdateRole(ctx context.Context, role *interfaces.Role) 
 // DeleteRole deletes a role
 func (r *UserRepository) DeleteRole(ctx context.Context, id string) error {
 	query := "DELETE FROM roles WHERE id = $1"
-	result, err := r.store.pool.Exec(ctx, query, id)
+	result, err := r.store.GetPool().Exec(ctx, query, id)
 	if err != nil {
 		return fmt.Errorf("failed to delete role: %w", err)
 	}
@@ -444,7 +444,7 @@ func (r *UserRepository) GetRolePermissions(ctx context.Context, roleID string) 
 	query := "SELECT permissions FROM roles WHERE id = $1"
 
 	var permissions []string
-	err := r.store.pool.QueryRow(ctx, query, roleID).Scan(&permissions)
+	err := r.store.GetPool().QueryRow(ctx, query, roleID).Scan(&permissions)
 	if err == pgx.ErrNoRows {
 		return nil, interfaces.ErrRoleNotFound{ID: roleID}
 	}
@@ -464,7 +464,7 @@ func (r *UserRepository) GetUserPermissions(ctx context.Context, userID string) 
 		WHERE ur.user_id = $1
 	`
 
-	rows, err := r.store.pool.Query(ctx, query, userID)
+	rows, err := r.store.GetPool().Query(ctx, query, userID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get user permissions: %w", err)
 	}
@@ -491,7 +491,7 @@ func (r *UserRepository) CreateSession(ctx context.Context, session *interfaces.
 		VALUES ($1, $2, $3, $4, $5, $6)
 	`
 
-	_, err := r.store.pool.Exec(ctx, query,
+	_, err := r.store.GetPool().Exec(ctx, query,
 		session.ID,
 		session.UserID,
 		session.Token,
@@ -516,7 +516,7 @@ func (r *UserRepository) GetSession(ctx context.Context, token string) (*interfa
 	`
 
 	var session interfaces.Session
-	err := r.store.pool.QueryRow(ctx, query, token).Scan(
+	err := r.store.GetPool().QueryRow(ctx, query, token).Scan(
 		&session.ID,
 		&session.UserID,
 		&session.Token,
@@ -539,7 +539,7 @@ func (r *UserRepository) GetSession(ctx context.Context, token string) (*interfa
 // DeleteSession deletes a session
 func (r *UserRepository) DeleteSession(ctx context.Context, token string) error {
 	query := "DELETE FROM sessions WHERE token = $1"
-	_, err := r.store.pool.Exec(ctx, query, token)
+	_, err := r.store.GetPool().Exec(ctx, query, token)
 	if err != nil {
 		return fmt.Errorf("failed to delete session: %w", err)
 	}
@@ -549,7 +549,7 @@ func (r *UserRepository) DeleteSession(ctx context.Context, token string) error 
 // CleanExpiredSessions removes all expired sessions
 func (r *UserRepository) CleanExpiredSessions(ctx context.Context) error {
 	query := "DELETE FROM sessions WHERE expires_at < CURRENT_TIMESTAMP"
-	_, err := r.store.pool.Exec(ctx, query)
+	_, err := r.store.GetPool().Exec(ctx, query)
 	if err != nil {
 		return fmt.Errorf("failed to clean expired sessions: %w", err)
 	}
@@ -562,7 +562,7 @@ func (r *UserRepository) CleanExpiredSessions(ctx context.Context) error {
 func (r *UserRepository) getUserRoleIDs(ctx context.Context, userID string) ([]string, error) {
 	query := "SELECT role_id FROM user_roles WHERE user_id = $1"
 
-	rows, err := r.store.pool.Query(ctx, query, userID)
+	rows, err := r.store.GetPool().Query(ctx, query, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -583,6 +583,6 @@ func (r *UserRepository) getUserRoleIDs(ctx context.Context, userID string) ([]s
 // assignRoleToUser assigns a role to a user
 func (r *UserRepository) assignRoleToUser(ctx context.Context, userID, roleID string) error {
 	query := "INSERT INTO user_roles (user_id, role_id) VALUES ($1, $2) ON CONFLICT DO NOTHING"
-	_, err := r.store.pool.Exec(ctx, query, userID, roleID)
+	_, err := r.store.GetPool().Exec(ctx, query, userID, roleID)
 	return err
 }

@@ -104,7 +104,7 @@ func (c *HARTConfig) Validate() error {
 	if c.StopBits == 0 {
 		c.StopBits = 1
 	}
-	if c.Parity == "" {
+	if c.Parity == ParityNone {
 		c.Parity = ParityOdd // HART使用奇校验
 	}
 

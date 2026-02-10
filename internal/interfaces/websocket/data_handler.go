@@ -3,8 +3,6 @@ package websocket
 import (
 	"log"
 	"net/http"
-
-	"github.com/gorilla/websocket"
 )
 
 // DataHandler WebSocket数据处理器

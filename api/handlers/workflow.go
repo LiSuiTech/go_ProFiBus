@@ -8,7 +8,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"go_ProFiBus/internal/application/workflow"
-	templateDomain "go_ProFiBus/internal/domain/workflow_template"
 	"go_ProFiBus/internal/infrastructure/storage"
 )
 
@@ -35,7 +34,7 @@ func (h *WorkflowHandler) SetTemplateRepository(templateRepo *storage.WorkflowTe
 // ListWorkflows 列出工作流
 // GET /api/v1/workflows
 func (h *WorkflowHandler) ListWorkflows(c *gin.Context) {
-	workflows, err := h.repo.List(c.Request.Context())
+	workflows, err := h.repo.List(c.Request.Context(), nil)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "查询工作流列表失败", "details": err.Error()})
 		return

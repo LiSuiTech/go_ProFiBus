@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"go_ProFiBus/internal/application/workflow"
-	"time"
 
 	"github.com/jackc/pgx/v5"
 )
@@ -52,7 +51,7 @@ func (r *WorkflowRepositoryImpl) Save(ctx context.Context, wf *workflow.Workflow
 			updated_at = EXCLUDED.updated_at
 	`
 
-	_, err = r.store.pool.Exec(ctx, query,
+	_, err = r.store.GetPool().Exec(ctx, query,
 		wf.ID, wf.Name, wf.Description, nodesJSON, edgesJSON, variablesJSON,
 		wf.Status, wf.CreatedAt, wf.UpdatedAt, wf.CreatedBy,
 	)
@@ -75,7 +74,7 @@ func (r *WorkflowRepositoryImpl) GetByID(ctx context.Context, id string) (*workf
 	var wf workflow.Workflow
 	var nodesJSON, edgesJSON, variablesJSON []byte
 
-	err := r.store.pool.QueryRow(ctx, query, id).Scan(
+	err := r.store.GetPool().QueryRow(ctx, query, id).Scan(
 		&wf.ID, &wf.Name, &wf.Description, &nodesJSON, &edgesJSON, &variablesJSON,
 		&wf.Status, &wf.CreatedAt, &wf.UpdatedAt, &wf.CreatedBy,
 	)
@@ -115,7 +114,7 @@ func (r *WorkflowRepositoryImpl) List(ctx context.Context, filters map[string]in
 
 	query += " ORDER BY created_at DESC"
 
-	rows, err := r.store.pool.Query(ctx, query, args...)
+	rows, err := r.store.GetPool().Query(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list workflows: %w", err)
 	}
@@ -153,7 +152,7 @@ func (r *WorkflowRepositoryImpl) List(ctx context.Context, filters map[string]in
 // Delete 删除工作流
 func (r *WorkflowRepositoryImpl) Delete(ctx context.Context, id string) error {
 	query := `DELETE FROM workflows WHERE id = $1`
-	result, err := r.store.pool.Exec(ctx, query, id)
+	result, err := r.store.GetPool().Exec(ctx, query, id)
 	if err != nil {
 		return fmt.Errorf("failed to delete workflow: %w", err)
 	}
@@ -189,7 +188,7 @@ func (r *WorkflowRepositoryImpl) SaveExecution(ctx context.Context, exec *workfl
 			error = EXCLUDED.error
 	`
 
-	_, err = r.store.pool.Exec(ctx, query,
+	_, err = r.store.GetPool().Exec(ctx, query,
 		exec.ID, exec.WorkflowID, exec.Status, nodeStatusesJSON, variablesJSON,
 		exec.StartedAt, exec.CompletedAt, exec.Error,
 	)
@@ -212,7 +211,7 @@ func (r *WorkflowRepositoryImpl) GetExecution(ctx context.Context, id string) (*
 	var exec workflow.WorkflowExecution
 	var nodeStatusesJSON, variablesJSON []byte
 
-	err := r.store.pool.QueryRow(ctx, query, id).Scan(
+	err := r.store.GetPool().QueryRow(ctx, query, id).Scan(
 		&exec.ID, &exec.WorkflowID, &exec.Status, &nodeStatusesJSON, &variablesJSON,
 		&exec.StartedAt, &exec.CompletedAt, &exec.Error,
 	)
@@ -243,7 +242,7 @@ func (r *WorkflowRepositoryImpl) ListExecutions(ctx context.Context, workflowID 
 		ORDER BY started_at DESC
 	`
 
-	rows, err := r.store.pool.Query(ctx, query, workflowID)
+	rows, err := r.store.GetPool().Query(ctx, query, workflowID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list executions: %w", err)
 	}

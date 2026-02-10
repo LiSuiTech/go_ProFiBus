@@ -99,12 +99,12 @@ func (r *FusionRepositoryImpl) GetDataSourceByID(ctx context.Context, id string)
 	source.SourceType = fusionDomain.SourceType(sourceType)
 
 	if err := json.Unmarshal(configJSON, &source.SourceConfig); err != nil {
-		r.store.log.Warn("反序列化数据源配置失败: %v", err)
+		r.store.Log().Warn("反序列化数据源配置失败: %v", err)
 		source.SourceConfig = make(map[string]interface{})
 	}
 
 	if err := json.Unmarshal(metadataJSON, &source.Metadata); err != nil {
-		r.store.log.Warn("反序列化元数据失败: %v", err)
+		r.store.Log().Warn("反序列化元数据失败: %v", err)
 		source.Metadata = make(map[string]interface{})
 	}
 
@@ -149,12 +149,12 @@ func (r *FusionRepositoryImpl) GetDataSourceByName(ctx context.Context, name str
 	source.SourceType = fusionDomain.SourceType(sourceType)
 
 	if err := json.Unmarshal(configJSON, &source.SourceConfig); err != nil {
-		r.store.log.Warn("反序列化数据源配置失败: %v", err)
+		r.store.Log().Warn("反序列化数据源配置失败: %v", err)
 		source.SourceConfig = make(map[string]interface{})
 	}
 
 	if err := json.Unmarshal(metadataJSON, &source.Metadata); err != nil {
-		r.store.log.Warn("反序列化元数据失败: %v", err)
+		r.store.Log().Warn("反序列化元数据失败: %v", err)
 		source.Metadata = make(map[string]interface{})
 	}
 
@@ -238,19 +238,19 @@ func (r *FusionRepositoryImpl) ListDataSources(ctx context.Context, filters inte
 			&source.UpdatedAt,
 		)
 		if err != nil {
-			r.store.log.Warn("扫描数据源失败: %v", err)
+			r.store.Log().Warn("扫描数据源失败: %v", err)
 			continue
 		}
 
 		source.SourceType = fusionDomain.SourceType(sourceType)
 
 		if err := json.Unmarshal(configJSON, &source.SourceConfig); err != nil {
-			r.store.log.Warn("反序列化数据源配置失败: %v", err)
+			r.store.Log().Warn("反序列化数据源配置失败: %v", err)
 			source.SourceConfig = make(map[string]interface{})
 		}
 
 		if err := json.Unmarshal(metadataJSON, &source.Metadata); err != nil {
-			r.store.log.Warn("反序列化元数据失败: %v", err)
+			r.store.Log().Warn("反序列化元数据失败: %v", err)
 			source.Metadata = make(map[string]interface{})
 		}
 
@@ -409,22 +409,22 @@ func (r *FusionRepositoryImpl) GetFusionConfigByID(ctx context.Context, id strin
 	}
 
 	if err := json.Unmarshal(sourceWeightsJSON, &config.SourceWeights); err != nil {
-		r.store.log.Warn("反序列化数据源权重失败: %v", err)
+		r.store.Log().Warn("反序列化数据源权重失败: %v", err)
 		config.SourceWeights = make(map[string]float64)
 	}
 
 	if err := json.Unmarshal(fieldWeightsJSON, &config.FieldWeights); err != nil {
-		r.store.log.Warn("反序列化字段权重失败: %v", err)
+		r.store.Log().Warn("反序列化字段权重失败: %v", err)
 		config.FieldWeights = make(map[string]float64)
 	}
 
 	if err := json.Unmarshal(outputFieldsJSON, &config.OutputFields); err != nil {
-		r.store.log.Warn("反序列化输出字段失败: %v", err)
+		r.store.Log().Warn("反序列化输出字段失败: %v", err)
 		config.OutputFields = make([]string, 0)
 	}
 
 	if err := json.Unmarshal(metadataJSON, &config.Metadata); err != nil {
-		r.store.log.Warn("反序列化元数据失败: %v", err)
+		r.store.Log().Warn("反序列化元数据失败: %v", err)
 		config.Metadata = make(map[string]interface{})
 	}
 
@@ -467,22 +467,22 @@ func (r *FusionRepositoryImpl) GetFusionConfigByName(ctx context.Context, name s
 	}
 
 	if err := json.Unmarshal(sourceWeightsJSON, &config.SourceWeights); err != nil {
-		r.store.log.Warn("反序列化数据源权重失败: %v", err)
+		r.store.Log().Warn("反序列化数据源权重失败: %v", err)
 		config.SourceWeights = make(map[string]float64)
 	}
 
 	if err := json.Unmarshal(fieldWeightsJSON, &config.FieldWeights); err != nil {
-		r.store.log.Warn("反序列化字段权重失败: %v", err)
+		r.store.Log().Warn("反序列化字段权重失败: %v", err)
 		config.FieldWeights = make(map[string]float64)
 	}
 
 	if err := json.Unmarshal(outputFieldsJSON, &config.OutputFields); err != nil {
-		r.store.log.Warn("反序列化输出字段失败: %v", err)
+		r.store.Log().Warn("反序列化输出字段失败: %v", err)
 		config.OutputFields = make([]string, 0)
 	}
 
 	if err := json.Unmarshal(metadataJSON, &config.Metadata); err != nil {
-		r.store.log.Warn("反序列化元数据失败: %v", err)
+		r.store.Log().Warn("反序列化元数据失败: %v", err)
 		config.Metadata = make(map[string]interface{})
 	}
 
@@ -548,27 +548,27 @@ func (r *FusionRepositoryImpl) ListFusionConfigs(ctx context.Context, filters in
 			&config.UpdatedAt,
 		)
 		if err != nil {
-			r.store.log.Warn("扫描融合配置失败: %v", err)
+			r.store.Log().Warn("扫描融合配置失败: %v", err)
 			continue
 		}
 
 		if err := json.Unmarshal(sourceWeightsJSON, &config.SourceWeights); err != nil {
-			r.store.log.Warn("反序列化数据源权重失败: %v", err)
+			r.store.Log().Warn("反序列化数据源权重失败: %v", err)
 			config.SourceWeights = make(map[string]float64)
 		}
 
 		if err := json.Unmarshal(fieldWeightsJSON, &config.FieldWeights); err != nil {
-			r.store.log.Warn("反序列化字段权重失败: %v", err)
+			r.store.Log().Warn("反序列化字段权重失败: %v", err)
 			config.FieldWeights = make(map[string]float64)
 		}
 
 		if err := json.Unmarshal(outputFieldsJSON, &config.OutputFields); err != nil {
-			r.store.log.Warn("反序列化输出字段失败: %v", err)
+			r.store.Log().Warn("反序列化输出字段失败: %v", err)
 			config.OutputFields = make([]string, 0)
 		}
 
 		if err := json.Unmarshal(metadataJSON, &config.Metadata); err != nil {
-			r.store.log.Warn("反序列化元数据失败: %v", err)
+			r.store.Log().Warn("反序列化元数据失败: %v", err)
 			config.Metadata = make(map[string]interface{})
 		}
 
@@ -704,7 +704,7 @@ func (r *FusionRepositoryImpl) GetConfigSources(ctx context.Context, configID st
 			&rel.CreatedAt,
 		)
 		if err != nil {
-			r.store.log.Warn("扫描配置数据源关系失败: %v", err)
+			r.store.Log().Warn("扫描配置数据源关系失败: %v", err)
 			continue
 		}
 		relations = append(relations, &rel)
@@ -842,17 +842,17 @@ func (r *FusionRepositoryImpl) GetFusionResults(ctx context.Context, filters int
 			&result.CreatedAt,
 		)
 		if err != nil {
-			r.store.log.Warn("扫描融合结果失败: %v", err)
+			r.store.Log().Warn("扫描融合结果失败: %v", err)
 			continue
 		}
 
 		if err := json.Unmarshal(fusedDataJSON, &result.FusedData); err != nil {
-			r.store.log.Warn("反序列化融合数据失败: %v", err)
+			r.store.Log().Warn("反序列化融合数据失败: %v", err)
 			result.FusedData = make(map[string]interface{})
 		}
 
 		if err := json.Unmarshal(metadataJSON, &result.Metadata); err != nil {
-			r.store.log.Warn("反序列化元数据失败: %v", err)
+			r.store.Log().Warn("反序列化元数据失败: %v", err)
 			result.Metadata = make(map[string]interface{})
 		}
 
@@ -898,12 +898,12 @@ func (r *FusionRepositoryImpl) GetLatestFusionResult(ctx context.Context, config
 	}
 
 	if err := json.Unmarshal(fusedDataJSON, &result.FusedData); err != nil {
-		r.store.log.Warn("反序列化融合数据失败: %v", err)
+		r.store.Log().Warn("反序列化融合数据失败: %v", err)
 		result.FusedData = make(map[string]interface{})
 	}
 
 	if err := json.Unmarshal(metadataJSON, &result.Metadata); err != nil {
-		r.store.log.Warn("反序列化元数据失败: %v", err)
+		r.store.Log().Warn("反序列化元数据失败: %v", err)
 		result.Metadata = make(map[string]interface{})
 	}
 
@@ -976,17 +976,17 @@ func (r *FusionRepositoryImpl) GetSourceDataCache(ctx context.Context, sourceID 
 			&cache.CreatedAt,
 		)
 		if err != nil {
-			r.store.log.Warn("扫描数据缓存失败: %v", err)
+			r.store.Log().Warn("扫描数据缓存失败: %v", err)
 			continue
 		}
 
 		if err := json.Unmarshal(dataJSON, &cache.Data); err != nil {
-			r.store.log.Warn("反序列化数据失败: %v", err)
+			r.store.Log().Warn("反序列化数据失败: %v", err)
 			cache.Data = make(map[string]interface{})
 		}
 
 		if err := json.Unmarshal(metadataJSON, &cache.Metadata); err != nil {
-			r.store.log.Warn("反序列化元数据失败: %v", err)
+			r.store.Log().Warn("反序列化元数据失败: %v", err)
 			cache.Metadata = make(map[string]interface{})
 		}
 

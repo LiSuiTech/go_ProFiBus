@@ -34,7 +34,7 @@ func (r *WorkflowTemplateRepositoryImpl) CreateTemplate(ctx context.Context, tem
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
 	`
 
-	_, err := r.store.pool.Exec(ctx, query,
+	_, err := r.store.GetPool().Exec(ctx, query,
 		template.ID, template.Name, template.Description, template.Category, template.Tags,
 		template.Icon, template.ThumbnailURL, workflowDataJSON, variablesConfigJSON,
 		template.UsageCount, template.Rating, template.Enabled,
@@ -61,7 +61,7 @@ func (r *WorkflowTemplateRepositoryImpl) GetTemplateByID(ctx context.Context, id
 	var template templateDomain.WorkflowTemplate
 	var workflowDataJSON, variablesConfigJSON, metadataJSON []byte
 
-	err := r.store.pool.QueryRow(ctx, query, id).Scan(
+	err := r.store.GetPool().QueryRow(ctx, query, id).Scan(
 		&template.ID, &template.Name, &template.Description, &template.Category, &template.Tags,
 		&template.Icon, &template.ThumbnailURL, &workflowDataJSON, &variablesConfigJSON,
 		&template.UsageCount, &template.Rating, &template.Enabled,
@@ -129,7 +129,7 @@ func (r *WorkflowTemplateRepositoryImpl) ListTemplates(ctx context.Context, filt
 		}
 	}
 
-	rows, err := r.store.pool.Query(ctx, query, args...)
+	rows, err := r.store.GetPool().Query(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("查询模板列表失败: %w", err)
 	}
@@ -174,7 +174,7 @@ func (r *WorkflowTemplateRepositoryImpl) UpdateTemplate(ctx context.Context, tem
 		WHERE id = $1
 	`
 
-	_, err := r.store.pool.Exec(ctx, query,
+	_, err := r.store.GetPool().Exec(ctx, query,
 		template.ID, template.Name, template.Description, template.Category, template.Tags,
 		template.Icon, template.ThumbnailURL, workflowDataJSON, variablesConfigJSON,
 		template.UsageCount, template.Rating, template.Enabled, template.UpdatedAt, metadataJSON,
@@ -190,7 +190,7 @@ func (r *WorkflowTemplateRepositoryImpl) UpdateTemplate(ctx context.Context, tem
 // DeleteTemplate 删除模板
 func (r *WorkflowTemplateRepositoryImpl) DeleteTemplate(ctx context.Context, id string) error {
 	query := `DELETE FROM workflow_templates WHERE id = $1`
-	_, err := r.store.pool.Exec(ctx, query, id)
+	_, err := r.store.GetPool().Exec(ctx, query, id)
 	if err != nil {
 		return fmt.Errorf("删除模板失败: %w", err)
 	}
@@ -200,7 +200,7 @@ func (r *WorkflowTemplateRepositoryImpl) DeleteTemplate(ctx context.Context, id 
 // IncrementUsage 增加使用次数
 func (r *WorkflowTemplateRepositoryImpl) IncrementUsage(ctx context.Context, id string) error {
 	query := `UPDATE workflow_templates SET usage_count = usage_count + 1, updated_at = CURRENT_TIMESTAMP WHERE id = $1`
-	_, err := r.store.pool.Exec(ctx, query, id)
+	_, err := r.store.GetPool().Exec(ctx, query, id)
 	if err != nil {
 		return fmt.Errorf("更新使用次数失败: %w", err)
 	}

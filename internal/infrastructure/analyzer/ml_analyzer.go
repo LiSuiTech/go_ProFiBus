@@ -91,9 +91,10 @@ func (mla *MLAnalyzer) Analyze(ctx context.Context, data interfaces.DataSample) 
 		return []interfaces.AnalysisResult{}, nil
 	}
 
-	// 准备输入数据
+	// 准备输入数据（GetData() 已返回 map[string]interface{}）
 	inputData := make([]float64, 0)
-	if dataMap, ok := data.GetData().(map[string]interface{}); ok {
+	dataMap := data.GetData()
+	if dataMap != nil {
 		// 提取数值特征
 		for _, v := range dataMap {
 			switch val := v.(type) {
@@ -144,9 +145,12 @@ func (mla *MLAnalyzer) Analyze(ctx context.Context, data interfaces.DataSample) 
 		anomalyScore := output.Data[0]
 		if anomalyScore > mla.anomalyThreshold {
 			results = append(results, interfaces.AnalysisResult{
-				Type:        "anomaly",
-				Confidence:  anomalyScore,
-				Description: fmt.Sprintf("检测到异常，分数: %.2f", anomalyScore),
+				Type:      "anomaly",
+				Severity:  3,
+				Score:     anomalyScore,
+				Message:   fmt.Sprintf("检测到异常，分数: %.2f", anomalyScore),
+				Details:   map[string]interface{}{"anomaly_score": anomalyScore},
+				Timestamp: time.Now(),
 			})
 		}
 	}
@@ -216,6 +220,25 @@ func (mla *MLAnalyzer) GetThreshold() float64 {
 	defer mla.mu.RUnlock()
 
 	return mla.anomalyThreshold
+}
+
+// SetThreshold 设置异常阈值
+func (mla *MLAnalyzer) SetThreshold(threshold float64) {
+	mla.mu.Lock()
+	defer mla.mu.Unlock()
+
+	mla.anomalyThreshold = threshold
+}
+
+// GetAnomalyRate 获取当前异常率（已检测异常数/总样本数）
+func (mla *MLAnalyzer) GetAnomalyRate() float64 {
+	mla.statsMu.RLock()
+	defer mla.statsMu.RUnlock()
+
+	if mla.stats.TotalSamples <= 0 {
+		return 0
+	}
+	return float64(mla.stats.AnomaliesDetected) / float64(mla.stats.TotalSamples)
 }
 
 // Close 关闭分析器 - 实现 Analyzer 接口

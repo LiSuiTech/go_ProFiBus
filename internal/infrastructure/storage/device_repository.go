@@ -95,7 +95,7 @@ func (r *DeviceRepositoryImpl) GetByID(ctx context.Context, id string) (*deviceD
 	device.Status = deviceDomain.DeviceStatus(status)
 
 	if err := json.Unmarshal(metadataJSON, &device.Metadata); err != nil {
-		r.store.log.Warn("反序列化元数据失败: %v", err)
+		r.store.Log().Warn("反序列化元数据失败: %v", err)
 		device.Metadata = make(map[string]interface{})
 	}
 
@@ -174,7 +174,7 @@ func (r *DeviceRepositoryImpl) List(ctx context.Context, filters interfaces.Devi
 			&device.UpdatedAt,
 		)
 		if err != nil {
-			r.store.log.Warn("扫描设备失败: %v", err)
+			r.store.Log().Warn("扫描设备失败: %v", err)
 			continue
 		}
 
@@ -182,7 +182,7 @@ func (r *DeviceRepositoryImpl) List(ctx context.Context, filters interfaces.Devi
 		device.Status = deviceDomain.DeviceStatus(status)
 
 		if err := json.Unmarshal(metadataJSON, &device.Metadata); err != nil {
-			r.store.log.Warn("反序列化元数据失败: %v", err)
+			r.store.Log().Warn("反序列化元数据失败: %v", err)
 			device.Metadata = make(map[string]interface{})
 		}
 
@@ -319,7 +319,7 @@ func (r *DeviceRepositoryImpl) GetByChannelID(ctx context.Context, channelID str
 			&device.UpdatedAt,
 		)
 		if err != nil {
-			r.store.log.Warn("扫描设备失败: %v", err)
+			r.store.Log().Warn("扫描设备失败: %v", err)
 			continue
 		}
 
@@ -327,7 +327,7 @@ func (r *DeviceRepositoryImpl) GetByChannelID(ctx context.Context, channelID str
 		device.Status = deviceDomain.DeviceStatus(status)
 
 		if err := json.Unmarshal(metadataJSON, &device.Metadata); err != nil {
-			r.store.log.Warn("反序列化元数据失败: %v", err)
+			r.store.Log().Warn("反序列化元数据失败: %v", err)
 			device.Metadata = make(map[string]interface{})
 		}
 
@@ -379,7 +379,7 @@ func (r *DeviceRepositoryImpl) GetChannels(ctx context.Context, deviceID string)
 	for rows.Next() {
 		var channelID string
 		if err := rows.Scan(&channelID); err != nil {
-			r.store.log.Warn("扫描通道ID失败: %v", err)
+			r.store.Log().Warn("扫描通道ID失败: %v", err)
 			continue
 		}
 		channelIDs = append(channelIDs, channelID)

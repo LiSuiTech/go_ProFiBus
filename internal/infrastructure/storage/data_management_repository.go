@@ -86,7 +86,7 @@ func (r *DataManagementRepositoryImpl) GetCleaningRuleByID(ctx context.Context, 
 	rule.RuleType = dataManagementDomain.CleaningRuleType(ruleType)
 
 	if err := json.Unmarshal(configJSON, &rule.Config); err != nil {
-		r.store.log.Warn("反序列化配置失败: %v", err)
+		r.store.Log().Warn("反序列化配置失败: %v", err)
 		rule.Config = make(map[string]interface{})
 	}
 
@@ -154,14 +154,14 @@ func (r *DataManagementRepositoryImpl) ListCleaningRules(ctx context.Context, fi
 			&rule.UpdatedAt,
 		)
 		if err != nil {
-			r.store.log.Warn("扫描清洗规则失败: %v", err)
+			r.store.Log().Warn("扫描清洗规则失败: %v", err)
 			continue
 		}
 
 		rule.RuleType = dataManagementDomain.CleaningRuleType(ruleType)
 
 		if err := json.Unmarshal(configJSON, &rule.Config); err != nil {
-			r.store.log.Warn("反序列化配置失败: %v", err)
+			r.store.Log().Warn("反序列化配置失败: %v", err)
 			rule.Config = make(map[string]interface{})
 		}
 
@@ -303,7 +303,7 @@ func (r *DataManagementRepositoryImpl) GetArchivePolicyByID(ctx context.Context,
 	}
 
 	if err := json.Unmarshal(metadataJSON, &policy.Metadata); err != nil {
-		r.store.log.Warn("反序列化元数据失败: %v", err)
+		r.store.Log().Warn("反序列化元数据失败: %v", err)
 		policy.Metadata = make(map[string]interface{})
 	}
 
@@ -385,12 +385,12 @@ func (r *DataManagementRepositoryImpl) ListArchivePolicies(ctx context.Context, 
 			&policy.UpdatedAt,
 		)
 		if err != nil {
-			r.store.log.Warn("扫描归档策略失败: %v", err)
+			r.store.Log().Warn("扫描归档策略失败: %v", err)
 			continue
 		}
 
 		if err := json.Unmarshal(metadataJSON, &policy.Metadata); err != nil {
-			r.store.log.Warn("反序列化元数据失败: %v", err)
+			r.store.Log().Warn("反序列化元数据失败: %v", err)
 			policy.Metadata = make(map[string]interface{})
 		}
 
@@ -463,7 +463,6 @@ func (r *DataManagementRepositoryImpl) DeleteArchivePolicy(ctx context.Context, 
 
 // GetPoliciesToRun 获取需要执行的归档策略
 func (r *DataManagementRepositoryImpl) GetPoliciesToRun(ctx context.Context) ([]*dataManagementDomain.ArchivePolicy, error) {
-	now := time.Now()
 	filters := interfaces.ArchivePolicyFilters{
 		Enabled: func() *bool { b := true; return &b }(),
 		Limit:   100,
@@ -644,7 +643,7 @@ func (r *DataManagementRepositoryImpl) ListArchiveRecords(ctx context.Context, f
 			&record.CompletedAt,
 		)
 		if err != nil {
-			r.store.log.Warn("扫描归档记录失败: %v", err)
+			r.store.Log().Warn("扫描归档记录失败: %v", err)
 			continue
 		}
 
@@ -846,7 +845,7 @@ func (r *DataManagementRepositoryImpl) ListCleaningRecords(ctx context.Context, 
 			&record.CreatedAt,
 		)
 		if err != nil {
-			r.store.log.Warn("扫描清洗记录失败: %v", err)
+			r.store.Log().Warn("扫描清洗记录失败: %v", err)
 			continue
 		}
 
@@ -960,7 +959,7 @@ func (r *DataManagementRepositoryImpl) GetLifecycleConfig(ctx context.Context, s
 	}
 
 	if err := json.Unmarshal(metadataJSON, &config.Metadata); err != nil {
-		r.store.log.Warn("反序列化元数据失败: %v", err)
+		r.store.Log().Warn("反序列化元数据失败: %v", err)
 		config.Metadata = make(map[string]interface{})
 	}
 
@@ -1038,12 +1037,12 @@ func (r *DataManagementRepositoryImpl) ListLifecycleConfigs(ctx context.Context,
 			&config.UpdatedAt,
 		)
 		if err != nil {
-			r.store.log.Warn("扫描生命周期配置失败: %v", err)
+			r.store.Log().Warn("扫描生命周期配置失败: %v", err)
 			continue
 		}
 
 		if err := json.Unmarshal(metadataJSON, &config.Metadata); err != nil {
-			r.store.log.Warn("反序列化元数据失败: %v", err)
+			r.store.Log().Warn("反序列化元数据失败: %v", err)
 			config.Metadata = make(map[string]interface{})
 		}
 

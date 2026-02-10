@@ -62,7 +62,7 @@ const (
 )
 
 // EtherCATSlave EtherCAT从站
-type EtherCAT Slave struct {
+type EtherCATSlave struct {
 	Address         uint16 // 从站地址 (0-65535)
 	Position        int    // 拓扑位置
 	AliasAddress    uint16 // 别名地址

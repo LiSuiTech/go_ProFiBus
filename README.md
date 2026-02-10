@@ -287,9 +287,11 @@ go_ProFiBus/
 │   ├── api/                     # REST API Server
 │   └── examples/                # 使用示例（设备控制、Workflow 等）
 │
-├── ARCHITECTURE.md              # 架构文档 ⭐
-├── PHASE1_SUMMARY.md            # Phase 1 总结
-├── PHASE2_PLAN.md               # Phase 2 计划
+├── docs/                        # 架构图与文档
+│   ├── 系统总体架构图.png
+│   ├── 技术分层架构图.png
+│   ├── 核心数据流架构图.png
+│   └── DEPLOYMENT.md            # 部署说明
 └── README.md                    # 项目文档
 ```
 
@@ -302,13 +304,13 @@ go_ProFiBus/
 │      Interface Layer (pkg/interfaces)   │  接口定义层
 │    (DataSource, Analyzer, Actuator…)    │
 ├─────────────────────────────────────────┤
-│      Application Layer (internal/app)   │  应用层
+│   Application Layer (internal/application) │  应用层
 │    (Workflow, Training, DataMgmt…)     │  业务逻辑编排
 ├─────────────────────────────────────────┤
 │      Domain Layer (internal/domain)     │  领域层
 │    (Device, Alert, Prediction…)         │  业务实体
 ├─────────────────────────────────────────┤
-│  Infrastructure Layer (internal/infra)  │  基础设施层
+│ Infrastructure Layer (internal/infrastructure) │  基础设施层
 │  (Storage, Protocols, WebSocket…)       │  技术实现
 └─────────────────────────────────────────┘
 ```
@@ -345,7 +347,7 @@ Vue 3 Dashboard
 4. **Repository** - 数据仓储抽象
 5. **Tracer** - 数据流追踪和可视化（Phase 2）
 
-详细架构说明请参考：[ARCHITECTURE.md](./ARCHITECTURE.md)
+详细架构说明与图示见 [docs](./docs/) 目录下的架构图（系统总体架构图、技术分层架构图、核心数据流架构图）。
 
 ## 🤝 贡献指南
 

@@ -207,7 +207,10 @@ func (e *AlertOutputNodeExecutor) Execute(ctx context.Context, node *Node, input
 		alert.Details = data
 	}
 	if severity > 0 {
-		alert.Severity = severity
+		if alert.Details == nil {
+			alert.Details = make(map[string]interface{})
+		}
+		alert.Details["severity"] = severity
 	}
 
 	// 保存告警

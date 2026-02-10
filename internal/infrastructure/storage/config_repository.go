@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgtype"
 	"go_ProFiBus/pkg/interfaces"
 )
 
@@ -33,7 +32,7 @@ func (r *ConfigRepository) CreateRuleConfig(ctx context.Context, config *interfa
 
 	// Check if config already exists
 	var exists bool
-	err := r.store.pool.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM rule_configs WHERE id = $1)", config.ID).Scan(&exists)
+	err := r.store.GetPool().QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM rule_configs WHERE id = $1)", config.ID).Scan(&exists)
 	if err != nil {
 		return fmt.Errorf("failed to check rule config existence: %w", err)
 	}
@@ -52,7 +51,7 @@ func (r *ConfigRepository) CreateRuleConfig(ctx context.Context, config *interfa
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 	`
 
-	_, err = r.store.pool.Exec(ctx, query,
+	_, err = r.store.GetPool().Exec(ctx, query,
 		config.ID,
 		config.Name,
 		config.Description,
@@ -94,7 +93,7 @@ func (r *ConfigRepository) GetRuleConfig(ctx context.Context, id string) (*inter
 	var config interfaces.RuleConfig
 	var paramsJSON []byte
 
-	err := r.store.pool.QueryRow(ctx, query, id).Scan(
+	err := r.store.GetPool().QueryRow(ctx, query, id).Scan(
 		&config.ID,
 		&config.Name,
 		&config.Description,
@@ -154,7 +153,7 @@ func (r *ConfigRepository) ListRuleConfigs(ctx context.Context, enabled *bool, r
 
 	query += " ORDER BY priority DESC, created_at DESC"
 
-	rows, err := r.store.pool.Query(ctx, query, args...)
+	rows, err := r.store.GetPool().Query(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list rule configs: %w", err)
 	}
@@ -218,7 +217,7 @@ func (r *ConfigRepository) UpdateRuleConfig(ctx context.Context, config *interfa
 		WHERE id = $1
 	`
 
-	result, err := r.store.pool.Exec(ctx, query,
+	result, err := r.store.GetPool().Exec(ctx, query,
 		config.ID,
 		config.Name,
 		config.Description,
@@ -261,7 +260,7 @@ func (r *ConfigRepository) DeleteRuleConfig(ctx context.Context, id string) erro
 	}
 
 	query := "DELETE FROM rule_configs WHERE id = $1"
-	result, err := r.store.pool.Exec(ctx, query, id)
+	result, err := r.store.GetPool().Exec(ctx, query, id)
 	if err != nil {
 		return fmt.Errorf("failed to delete rule config: %w", err)
 	}
@@ -291,7 +290,7 @@ func (r *ConfigRepository) CreateAnalyzerConfig(ctx context.Context, config *int
 	}
 
 	var exists bool
-	err := r.store.pool.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM analyzer_configs WHERE id = $1)", config.ID).Scan(&exists)
+	err := r.store.GetPool().QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM analyzer_configs WHERE id = $1)", config.ID).Scan(&exists)
 	if err != nil {
 		return fmt.Errorf("failed to check analyzer config existence: %w", err)
 	}
@@ -309,7 +308,7 @@ func (r *ConfigRepository) CreateAnalyzerConfig(ctx context.Context, config *int
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 	`
 
-	_, err = r.store.pool.Exec(ctx, query,
+	_, err = r.store.GetPool().Exec(ctx, query,
 		config.ID,
 		config.Name,
 		config.Description,
@@ -350,7 +349,7 @@ func (r *ConfigRepository) GetAnalyzerConfig(ctx context.Context, id string) (*i
 	var config interfaces.AnalyzerConfig
 	var paramsJSON []byte
 
-	err := r.store.pool.QueryRow(ctx, query, id).Scan(
+	err := r.store.GetPool().QueryRow(ctx, query, id).Scan(
 		&config.ID,
 		&config.Name,
 		&config.Description,
@@ -395,7 +394,7 @@ func (r *ConfigRepository) ListAnalyzerConfigs(ctx context.Context, enabled *boo
 
 	query += " ORDER BY created_at DESC"
 
-	rows, err := r.store.pool.Query(ctx, query, args...)
+	rows, err := r.store.GetPool().Query(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list analyzer configs: %w", err)
 	}
@@ -457,7 +456,7 @@ func (r *ConfigRepository) UpdateAnalyzerConfig(ctx context.Context, config *int
 		WHERE id = $1
 	`
 
-	result, err := r.store.pool.Exec(ctx, query,
+	result, err := r.store.GetPool().Exec(ctx, query,
 		config.ID,
 		config.Name,
 		config.Description,
@@ -498,7 +497,7 @@ func (r *ConfigRepository) DeleteAnalyzerConfig(ctx context.Context, id string) 
 	}
 
 	query := "DELETE FROM analyzer_configs WHERE id = $1"
-	result, err := r.store.pool.Exec(ctx, query, id)
+	result, err := r.store.GetPool().Exec(ctx, query, id)
 	if err != nil {
 		return fmt.Errorf("failed to delete analyzer config: %w", err)
 	}
@@ -527,7 +526,7 @@ func (r *ConfigRepository) CreateProcessorConfig(ctx context.Context, config *in
 	}
 
 	var exists bool
-	err := r.store.pool.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM processor_configs WHERE id = $1)", config.ID).Scan(&exists)
+	err := r.store.GetPool().QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM processor_configs WHERE id = $1)", config.ID).Scan(&exists)
 	if err != nil {
 		return fmt.Errorf("failed to check processor config existence: %w", err)
 	}
@@ -545,7 +544,7 @@ func (r *ConfigRepository) CreateProcessorConfig(ctx context.Context, config *in
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 	`
 
-	_, err = r.store.pool.Exec(ctx, query,
+	_, err = r.store.GetPool().Exec(ctx, query,
 		config.ID,
 		config.Name,
 		config.Description,
@@ -586,7 +585,7 @@ func (r *ConfigRepository) GetProcessorConfig(ctx context.Context, id string) (*
 	var config interfaces.ProcessorConfig
 	var paramsJSON []byte
 
-	err := r.store.pool.QueryRow(ctx, query, id).Scan(
+	err := r.store.GetPool().QueryRow(ctx, query, id).Scan(
 		&config.ID,
 		&config.Name,
 		&config.Description,
@@ -631,7 +630,7 @@ func (r *ConfigRepository) ListProcessorConfigs(ctx context.Context, enabled *bo
 
 	query += ` ORDER BY "order", created_at DESC`
 
-	rows, err := r.store.pool.Query(ctx, query, args...)
+	rows, err := r.store.GetPool().Query(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list processor configs: %w", err)
 	}
@@ -693,7 +692,7 @@ func (r *ConfigRepository) UpdateProcessorConfig(ctx context.Context, config *in
 		WHERE id = $1
 	`
 
-	result, err := r.store.pool.Exec(ctx, query,
+	result, err := r.store.GetPool().Exec(ctx, query,
 		config.ID,
 		config.Name,
 		config.Description,
@@ -734,7 +733,7 @@ func (r *ConfigRepository) DeleteProcessorConfig(ctx context.Context, id string)
 	}
 
 	query := "DELETE FROM processor_configs WHERE id = $1"
-	result, err := r.store.pool.Exec(ctx, query, id)
+	result, err := r.store.GetPool().Exec(ctx, query, id)
 	if err != nil {
 		return fmt.Errorf("failed to delete processor config: %w", err)
 	}
@@ -763,7 +762,7 @@ func (r *ConfigRepository) CreateTemplate(ctx context.Context, template *interfa
 	}
 
 	var exists bool
-	err := r.store.pool.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM config_templates WHERE id = $1)", template.ID).Scan(&exists)
+	err := r.store.GetPool().QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM config_templates WHERE id = $1)", template.ID).Scan(&exists)
 	if err != nil {
 		return fmt.Errorf("failed to check template existence: %w", err)
 	}
@@ -786,7 +785,7 @@ func (r *ConfigRepository) CreateTemplate(ctx context.Context, template *interfa
 		VALUES ($1, $2, $3, $4, $5, $6, $7)
 	`
 
-	_, err = r.store.pool.Exec(ctx, query,
+	_, err = r.store.GetPool().Exec(ctx, query,
 		template.ID,
 		template.Name,
 		template.Description,
@@ -814,7 +813,7 @@ func (r *ConfigRepository) GetTemplate(ctx context.Context, id string) (*interfa
 	var template interfaces.ConfigTemplate
 	var schemaJSON, defaultsJSON []byte
 
-	err := r.store.pool.QueryRow(ctx, query, id).Scan(
+	err := r.store.GetPool().QueryRow(ctx, query, id).Scan(
 		&template.ID,
 		&template.Name,
 		&template.Description,
@@ -859,7 +858,7 @@ func (r *ConfigRepository) ListTemplates(ctx context.Context, configType string)
 
 	query += " ORDER BY category, name"
 
-	rows, err := r.store.pool.Query(ctx, query, args...)
+	rows, err := r.store.GetPool().Query(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list templates: %w", err)
 	}
@@ -921,7 +920,7 @@ func (r *ConfigRepository) UpdateTemplate(ctx context.Context, template *interfa
 		WHERE id = $1
 	`
 
-	result, err := r.store.pool.Exec(ctx, query,
+	result, err := r.store.GetPool().Exec(ctx, query,
 		template.ID,
 		template.Name,
 		template.Description,
@@ -945,7 +944,7 @@ func (r *ConfigRepository) UpdateTemplate(ctx context.Context, template *interfa
 // DeleteTemplate deletes a configuration template
 func (r *ConfigRepository) DeleteTemplate(ctx context.Context, id string) error {
 	query := "DELETE FROM config_templates WHERE id = $1"
-	result, err := r.store.pool.Exec(ctx, query, id)
+	result, err := r.store.GetPool().Exec(ctx, query, id)
 	if err != nil {
 		return fmt.Errorf("failed to delete template: %w", err)
 	}
@@ -969,7 +968,7 @@ func (r *ConfigRepository) RecordHistory(ctx context.Context, history *interface
 		VALUES ($1, $2, $3, $4, $5, $6, $7)
 	`
 
-	_, err := r.store.pool.Exec(ctx, query,
+	_, err := r.store.GetPool().Exec(ctx, query,
 		history.ConfigID,
 		history.ConfigType,
 		history.Action,
@@ -995,7 +994,7 @@ func (r *ConfigRepository) GetConfigHistory(ctx context.Context, configID string
 		ORDER BY changed_at DESC
 	`
 
-	rows, err := r.store.pool.Query(ctx, query, configID, configType)
+	rows, err := r.store.GetPool().Query(ctx, query, configID, configType)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get config history: %w", err)
 	}
@@ -1004,7 +1003,7 @@ func (r *ConfigRepository) GetConfigHistory(ctx context.Context, configID string
 	var history []*interfaces.ConfigHistory
 	for rows.Next() {
 		var h interfaces.ConfigHistory
-		var oldValueJSON, newValueJSON pgtype.JSONB
+		var oldValueJSON, newValueJSON []byte
 
 		err := rows.Scan(
 			&h.ID,
@@ -1021,15 +1020,15 @@ func (r *ConfigRepository) GetConfigHistory(ctx context.Context, configID string
 			return nil, fmt.Errorf("failed to scan history: %w", err)
 		}
 
-		// Unmarshal JSONB fields
-		if oldValueJSON.Valid {
-			if err := json.Unmarshal(oldValueJSON.Bytes, &h.OldValue); err != nil {
+		// Unmarshal JSONB 字段（pgx v5 将 JSONB 扫描为 []byte）
+		if len(oldValueJSON) > 0 {
+			if err := json.Unmarshal(oldValueJSON, &h.OldValue); err != nil {
 				return nil, fmt.Errorf("failed to unmarshal old value: %w", err)
 			}
 		}
 
-		if newValueJSON.Valid {
-			if err := json.Unmarshal(newValueJSON.Bytes, &h.NewValue); err != nil {
+		if len(newValueJSON) > 0 {
+			if err := json.Unmarshal(newValueJSON, &h.NewValue); err != nil {
 				return nil, fmt.Errorf("failed to unmarshal new value: %w", err)
 			}
 		}

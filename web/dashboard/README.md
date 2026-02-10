@@ -215,5 +215,5 @@ MIT
 ## Links
 
 - [Backend API Documentation](../../docs/API_EXAMPLES.md)
-- [Architecture Documentation](../../ARCHITECTURE.md)
-- [Phase 2 Plan](../../PHASE2_PLAN.md)
+- [架构图与文档](../../docs/)（系统总体架构图、技术分层架构图等）
+- [部署说明](../../docs/DEPLOYMENT.md)

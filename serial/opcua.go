@@ -1,8 +1,7 @@
-package serial
+//go:build gopcua
 
-// NOTE: This file requires gopcua v0.3.x or compatible version
-// Current compilation errors are due to API changes in different gopcua versions
-// TODO: Update to use the correct gopcua API for your installed version
+// OPC-UA 完整实现（需 gopcua 库，且 API 需与当前 gopcua 版本一致）。默认构建使用 opcua_stub.go。
+package serial
 
 import (
 	"context"

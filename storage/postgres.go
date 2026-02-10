@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -215,7 +216,7 @@ func (ps *PostgresStore) QueryRow(query string, args ...interface{}) pgx.Row {
 }
 
 // Exec 执行SQL语句
-func (ps *PostgresStore) Exec(query string, args ...interface{}) (pgx.CommandTag, error) {
+func (ps *PostgresStore) Exec(query string, args ...interface{}) (pgconn.CommandTag, error) {
 	ctx, cancel := context.WithTimeout(ps.ctx, 30*time.Second)
 	defer cancel()
 
@@ -269,7 +270,7 @@ func (ps *PostgresStore) GetStats() *StoreStats {
 	poolStats := ps.pool.Stat()
 
 	return &StoreStats{
-		TotalConnections:  poolStats.TotalConns(),
+		TotalConnections:  int64(poolStats.TotalConns()),
 		ActiveConnections: poolStats.AcquiredConns(),
 		IdleConnections:   poolStats.IdleConns(),
 		TotalQueries:      ps.stats.TotalQueries,
@@ -281,6 +282,11 @@ func (ps *PostgresStore) GetStats() *StoreStats {
 // GetPool 获取连接池（用于高级操作）
 func (ps *PostgresStore) GetPool() *pgxpool.Pool {
 	return ps.pool
+}
+
+// Log 返回日志实例（供 internal 包等跨包使用）
+func (ps *PostgresStore) Log() *logger.Logger {
+	return ps.log
 }
 
 // GetContext 获取context

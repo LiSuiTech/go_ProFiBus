@@ -6,7 +6,6 @@ import (
 	"fmt"
 	trainingDomain "go_ProFiBus/internal/domain/training"
 	"go_ProFiBus/pkg/interfaces"
-	"time"
 
 	"github.com/jackc/pgx/v5"
 )

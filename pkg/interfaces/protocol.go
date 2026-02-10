@@ -68,6 +68,7 @@ type ProtocolType string
 const (
 	// 现场总线协议
 	ProtocolPROFIBUS  ProtocolType = "PROFIBUS"   // PROFIBUS DP/PA
+	ProtocolModbus    ProtocolType = "Modbus"     // Modbus 通用（由配置区分 RTU/TCP）
 	ProtocolModbusRTU ProtocolType = "ModbusRTU"  // Modbus RTU
 	ProtocolDeviceNet ProtocolType = "DeviceNet"  // DeviceNet (CAN-based)
 	ProtocolHART      ProtocolType = "HART"       // HART (Highway Addressable Remote Transducer)

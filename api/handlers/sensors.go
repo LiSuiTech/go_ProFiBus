@@ -1,13 +1,12 @@
 package handlers
 
 import (
-	"go_ProFiBus/internal/domain/datasample"
-	"go_ProFiBus/storage"
 	"net/http"
 	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"go_ProFiBus/storage"
 )
 
 // SensorHandler 传感器数据处理器

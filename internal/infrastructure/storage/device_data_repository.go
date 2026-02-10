@@ -8,7 +8,6 @@ import (
 	"go_ProFiBus/pkg/interfaces"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 )
 
@@ -129,7 +128,7 @@ func (r *DeviceDataRepositoryImpl) GetDataFieldsByDevice(ctx context.Context, de
 			&field.UpdatedAt,
 		)
 		if err != nil {
-			r.store.log.Warn("扫描数据字段失败: %v", err)
+			r.store.Log().Warn("扫描数据字段失败: %v", err)
 			continue
 		}
 
@@ -271,12 +270,12 @@ func (r *DeviceDataRepositoryImpl) GetDataSourceByID(ctx context.Context, id str
 	source.SourceType = deviceDomain.SourceType(sourceType)
 
 	if err := json.Unmarshal(mappingJSON, &source.FieldMapping); err != nil {
-		r.store.log.Warn("反序列化字段映射失败: %v", err)
+		r.store.Log().Warn("反序列化字段映射失败: %v", err)
 		source.FieldMapping = make(map[string]string)
 	}
 
 	if err := json.Unmarshal(metadataJSON, &source.Metadata); err != nil {
-		r.store.log.Warn("反序列化元数据失败: %v", err)
+		r.store.Log().Warn("反序列化元数据失败: %v", err)
 		source.Metadata = make(map[string]interface{})
 	}
 
@@ -321,19 +320,19 @@ func (r *DeviceDataRepositoryImpl) GetDataSourcesByDevice(ctx context.Context, d
 			&source.UpdatedAt,
 		)
 		if err != nil {
-			r.store.log.Warn("扫描数据源失败: %v", err)
+			r.store.Log().Warn("扫描数据源失败: %v", err)
 			continue
 		}
 
 		source.SourceType = deviceDomain.SourceType(sourceType)
 
 		if err := json.Unmarshal(mappingJSON, &source.FieldMapping); err != nil {
-			r.store.log.Warn("反序列化字段映射失败: %v", err)
+			r.store.Log().Warn("反序列化字段映射失败: %v", err)
 			source.FieldMapping = make(map[string]string)
 		}
 
 		if err := json.Unmarshal(metadataJSON, &source.Metadata); err != nil {
-			r.store.log.Warn("反序列化元数据失败: %v", err)
+			r.store.Log().Warn("反序列化元数据失败: %v", err)
 			source.Metadata = make(map[string]interface{})
 		}
 
@@ -483,17 +482,17 @@ func (r *DeviceDataRepositoryImpl) GetFusionConfigByDevice(ctx context.Context, 
 	}
 
 	if err := json.Unmarshal(fieldWeightsJSON, &config.FieldWeights); err != nil {
-		r.store.log.Warn("反序列化字段权重失败: %v", err)
+		r.store.Log().Warn("反序列化字段权重失败: %v", err)
 		config.FieldWeights = make(map[string]float64)
 	}
 
 	if err := json.Unmarshal(sourceWeightsJSON, &config.SourceWeights); err != nil {
-		r.store.log.Warn("反序列化数据源权重失败: %v", err)
+		r.store.Log().Warn("反序列化数据源权重失败: %v", err)
 		config.SourceWeights = make(map[string]float64)
 	}
 
 	if err := json.Unmarshal(metadataJSON, &config.Metadata); err != nil {
-		r.store.log.Warn("反序列化元数据失败: %v", err)
+		r.store.Log().Warn("反序列化元数据失败: %v", err)
 		config.Metadata = make(map[string]interface{})
 	}
 
@@ -634,17 +633,17 @@ func (r *DeviceDataRepositoryImpl) GetFusedDataByDevice(ctx context.Context, dev
 			&data.CreatedAt,
 		)
 		if err != nil {
-			r.store.log.Warn("扫描融合数据失败: %v", err)
+			r.store.Log().Warn("扫描融合数据失败: %v", err)
 			continue
 		}
 
 		if err := json.Unmarshal(fusedDataJSON, &data.FusedData); err != nil {
-			r.store.log.Warn("反序列化融合数据失败: %v", err)
+			r.store.Log().Warn("反序列化融合数据失败: %v", err)
 			data.FusedData = make(map[string]interface{})
 		}
 
 		if err := json.Unmarshal(metadataJSON, &data.Metadata); err != nil {
-			r.store.log.Warn("反序列化元数据失败: %v", err)
+			r.store.Log().Warn("反序列化元数据失败: %v", err)
 			data.Metadata = make(map[string]interface{})
 		}
 
@@ -688,12 +687,12 @@ func (r *DeviceDataRepositoryImpl) GetLatestFusedData(ctx context.Context, devic
 	}
 
 	if err := json.Unmarshal(fusedDataJSON, &data.FusedData); err != nil {
-		r.store.log.Warn("反序列化融合数据失败: %v", err)
+		r.store.Log().Warn("反序列化融合数据失败: %v", err)
 		data.FusedData = make(map[string]interface{})
 	}
 
 	if err := json.Unmarshal(metadataJSON, &data.Metadata); err != nil {
-		r.store.log.Warn("反序列化元数据失败: %v", err)
+		r.store.Log().Warn("反序列化元数据失败: %v", err)
 		data.Metadata = make(map[string]interface{})
 	}
 

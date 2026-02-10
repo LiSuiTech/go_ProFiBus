@@ -172,7 +172,8 @@ func (h *MetricsHandler) GetSystemMetrics(c *gin.Context) {
 		// 目前先使用管道状态数据
 	}
 
-	// 计算平均持续时间（如果有数据）
+	// 计算平均持续时间（按查询时间范围估算，若有管道数则均分）
+	totalDuration := endTime.Sub(startTime)
 	avgDurationMs := int64(0)
 	if pipelineCount > 0 {
 		avgDurationMs = totalDuration.Milliseconds() / int64(pipelineCount)

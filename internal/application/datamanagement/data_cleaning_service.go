@@ -448,8 +448,8 @@ func (s *DataCleaningService) sortRulesByPriority(rules []*dataManagementDomain.
 
 // ExecuteCleaning 执行数据清洗
 func (s *DataCleaningService) ExecuteCleaning(ctx context.Context, ruleID, sourceType, sourceID string, startTime, endTime time.Time) error {
-	// 获取规则
-	rule, err := s.repo.GetCleaningRuleByID(ctx, ruleID)
+	// 获取规则（校验存在）
+	_, err := s.repo.GetCleaningRuleByID(ctx, ruleID)
 	if err != nil {
 		return fmt.Errorf("获取清洗规则失败: %w", err)
 	}

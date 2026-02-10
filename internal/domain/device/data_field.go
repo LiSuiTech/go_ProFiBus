@@ -221,3 +221,8 @@ func (fd *FusedData) SetQualityScore(score float64) {
 	}
 	fd.QualityScore = score
 }
+
+// GetQualityScore 获取质量评分
+func (fd *FusedData) GetQualityScore() float64 {
+	return fd.QualityScore
+}

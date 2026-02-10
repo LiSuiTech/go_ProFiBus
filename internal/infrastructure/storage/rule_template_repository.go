@@ -35,7 +35,7 @@ func (r *RuleTemplateRepositoryImpl) CreateTemplate(ctx context.Context, templat
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
 	`
 
-	_, err := r.store.pool.Exec(ctx, query,
+	_, err := r.store.GetPool().Exec(ctx, query,
 		template.ID, template.Name, template.Description, template.Category, template.RuleType,
 		template.Tags, template.Icon, conditionTemplateJSON, variablesConfigJSON, outputConfigJSON,
 		template.UsageCount, template.Rating, template.Enabled,
@@ -62,7 +62,7 @@ func (r *RuleTemplateRepositoryImpl) GetTemplateByID(ctx context.Context, id str
 	var template templateDomain.RuleTemplate
 	var conditionTemplateJSON, variablesConfigJSON, outputConfigJSON, metadataJSON []byte
 
-	err := r.store.pool.QueryRow(ctx, query, id).Scan(
+	err := r.store.GetPool().QueryRow(ctx, query, id).Scan(
 		&template.ID, &template.Name, &template.Description, &template.Category, &template.RuleType,
 		&template.Tags, &template.Icon, &conditionTemplateJSON, &variablesConfigJSON,
 		&outputConfigJSON, &template.UsageCount, &template.Rating, &template.Enabled,
@@ -137,7 +137,7 @@ func (r *RuleTemplateRepositoryImpl) ListTemplates(ctx context.Context, filters 
 		}
 	}
 
-	rows, err := r.store.pool.Query(ctx, query, args...)
+	rows, err := r.store.GetPool().Query(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("查询模板列表失败: %w", err)
 	}
@@ -184,7 +184,7 @@ func (r *RuleTemplateRepositoryImpl) UpdateTemplate(ctx context.Context, templat
 		WHERE id = $1
 	`
 
-	_, err := r.store.pool.Exec(ctx, query,
+	_, err := r.store.GetPool().Exec(ctx, query,
 		template.ID, template.Name, template.Description, template.Category, template.RuleType,
 		template.Tags, template.Icon, conditionTemplateJSON, variablesConfigJSON, outputConfigJSON,
 		template.UsageCount, template.Rating, template.Enabled, template.UpdatedAt, metadataJSON,
@@ -200,7 +200,7 @@ func (r *RuleTemplateRepositoryImpl) UpdateTemplate(ctx context.Context, templat
 // DeleteTemplate 删除模板
 func (r *RuleTemplateRepositoryImpl) DeleteTemplate(ctx context.Context, id string) error {
 	query := `DELETE FROM rule_templates WHERE id = $1`
-	_, err := r.store.pool.Exec(ctx, query, id)
+	_, err := r.store.GetPool().Exec(ctx, query, id)
 	if err != nil {
 		return fmt.Errorf("删除模板失败: %w", err)
 	}
@@ -210,7 +210,7 @@ func (r *RuleTemplateRepositoryImpl) DeleteTemplate(ctx context.Context, id stri
 // IncrementUsage 增加使用次数
 func (r *RuleTemplateRepositoryImpl) IncrementUsage(ctx context.Context, id string) error {
 	query := `UPDATE rule_templates SET usage_count = usage_count + 1, updated_at = CURRENT_TIMESTAMP WHERE id = $1`
-	_, err := r.store.pool.Exec(ctx, query, id)
+	_, err := r.store.GetPool().Exec(ctx, query, id)
 	if err != nil {
 		return fmt.Errorf("更新使用次数失败: %w", err)
 	}
@@ -229,7 +229,7 @@ func (r *RuleTemplateRepositoryImpl) SaveTestResult(ctx context.Context, result 
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 	`
 
-	_, err := r.store.pool.Exec(ctx, query,
+	_, err := r.store.GetPool().Exec(ctx, query,
 		result.ID, result.RuleID, result.TemplateID, testDataJSON, ruleConfigJSON, testResultJSON,
 		result.Triggered, result.ExecutionTimeMs, result.CreatedAt, result.CreatedBy,
 	)
@@ -276,7 +276,7 @@ func (r *RuleTemplateRepositoryImpl) ListTestResults(ctx context.Context, filter
 		}
 	}
 
-	rows, err := r.store.pool.Query(ctx, query, args...)
+	rows, err := r.store.GetPool().Query(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("查询测试结果列表失败: %w", err)
 	}

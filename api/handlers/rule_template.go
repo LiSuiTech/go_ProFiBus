@@ -7,23 +7,23 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	alertDomain "go_ProFiBus/internal/domain/alert"
-	templateDomain "go_ProFiBus/internal/domain/rule_template"
 	ruleTemplateApp "go_ProFiBus/internal/application/rule_template"
 	"go_ProFiBus/internal/infrastructure/storage"
+	"go_ProFiBus/pkg/interfaces"
 )
 
 // RuleTemplateHandler 规则模板API处理器
 type RuleTemplateHandler struct {
 	templateRepo *storage.RuleTemplateRepositoryImpl
 	testService  *ruleTemplateApp.RuleTestService
-	alertRepo    *storage.AlertRepositoryImpl
+	alertRepo    interfaces.AlertRepository
 }
 
 // NewRuleTemplateHandler 创建规则模板处理器
 func NewRuleTemplateHandler(
 	templateRepo *storage.RuleTemplateRepositoryImpl,
 	testService *ruleTemplateApp.RuleTestService,
-	alertRepo *storage.AlertRepositoryImpl,
+	alertRepo interfaces.AlertRepository,
 ) *RuleTemplateHandler {
 	return &RuleTemplateHandler{
 		templateRepo: templateRepo,

@@ -2,8 +2,8 @@ package storage
 
 import (
 	"context"
-	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"go_ProFiBus/internal/domain/channel"
 	"go_ProFiBus/pkg/interfaces"
@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 )
 
 // ChannelRepositoryImpl 采集通道仓储实现
@@ -43,7 +44,7 @@ func (r *ChannelRepositoryImpl) CreateChannel(ctx context.Context, ch *channel.C
 		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 	`
 
-	_, err = r.store.GetDB().ExecContext(ctx, query,
+	_, err = r.store.GetPool().Exec(ctx, query,
 		ch.ID, ch.Name, ch.Description, ch.Protocol, ch.DeviceName, ch.DevicePort,
 		ch.Status, configJSON, ch.Enabled, ch.CreatedAt, ch.UpdatedAt,
 	)
@@ -62,12 +63,12 @@ func (r *ChannelRepositoryImpl) GetChannel(ctx context.Context, id string) (*cha
 	var ch channel.Channel
 	var configJSON []byte
 
-	err := r.store.GetDB().QueryRowContext(ctx, query, id).Scan(
+	err := r.store.GetPool().QueryRow(ctx, query, id).Scan(
 		&ch.ID, &ch.Name, &ch.Description, &ch.Protocol, &ch.DeviceName, &ch.DevicePort,
 		&ch.Status, &configJSON, &ch.Enabled, &ch.CreatedAt, &ch.UpdatedAt,
 	)
 
-	if err == sql.ErrNoRows {
+	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, fmt.Errorf("channel not found: %s", id)
 	}
 	if err != nil {
@@ -99,7 +100,7 @@ func (r *ChannelRepositoryImpl) GetChannels(ctx context.Context) ([]*channel.Cha
 		FROM channels ORDER BY created_at DESC
 	`
 
-	rows, err := r.store.GetDB().QueryContext(ctx, query)
+	rows, err := r.store.GetPool().Query(ctx, query)
 	if err != nil {
 		return nil, err
 	}
@@ -156,7 +157,7 @@ func (r *ChannelRepositoryImpl) UpdateChannel(ctx context.Context, ch *channel.C
 		WHERE id = $1
 	`
 
-	result, err := r.store.GetDB().ExecContext(ctx, query,
+	tag, err := r.store.GetPool().Exec(ctx, query,
 		ch.ID, ch.Name, ch.Description, ch.Protocol, ch.DeviceName, ch.DevicePort,
 		ch.Status, configJSON, ch.Enabled, ch.UpdatedAt,
 	)
@@ -164,11 +165,7 @@ func (r *ChannelRepositoryImpl) UpdateChannel(ctx context.Context, ch *channel.C
 		return err
 	}
 
-	rows, err := result.RowsAffected()
-	if err != nil {
-		return err
-	}
-	if rows == 0 {
+	if tag.RowsAffected() == 0 {
 		return fmt.Errorf("channel not found: %s", ch.ID)
 	}
 
@@ -178,22 +175,18 @@ func (r *ChannelRepositoryImpl) UpdateChannel(ctx context.Context, ch *channel.C
 // DeleteChannel 删除通道
 func (r *ChannelRepositoryImpl) DeleteChannel(ctx context.Context, id string) error {
 	// 先删除关联的点位
-	_, err := r.store.GetDB().ExecContext(ctx, "DELETE FROM channel_points WHERE channel_id = $1", id)
+	_, err := r.store.GetPool().Exec(ctx, "DELETE FROM channel_points WHERE channel_id = $1", id)
 	if err != nil {
 		return err
 	}
 
 	// 再删除通道
-	result, err := r.store.GetDB().ExecContext(ctx, "DELETE FROM channels WHERE id = $1", id)
+	tag, err := r.store.GetPool().Exec(ctx, "DELETE FROM channels WHERE id = $1", id)
 	if err != nil {
 		return err
 	}
 
-	rows, err := result.RowsAffected()
-	if err != nil {
-		return err
-	}
-	if rows == 0 {
+	if tag.RowsAffected() == 0 {
 		return fmt.Errorf("channel not found: %s", id)
 	}
 
@@ -204,16 +197,12 @@ func (r *ChannelRepositoryImpl) DeleteChannel(ctx context.Context, id string) er
 func (r *ChannelRepositoryImpl) UpdateChannelStatus(ctx context.Context, id string, status channel.ChannelStatus) error {
 	query := "UPDATE channels SET status = $2, updated_at = $3 WHERE id = $1"
 
-	result, err := r.store.GetDB().ExecContext(ctx, query, id, status, time.Now())
+	tag, err := r.store.GetPool().Exec(ctx, query, id, status, time.Now())
 	if err != nil {
 		return err
 	}
 
-	rows, err := result.RowsAffected()
-	if err != nil {
-		return err
-	}
-	if rows == 0 {
+	if tag.RowsAffected() == 0 {
 		return fmt.Errorf("channel not found: %s", id)
 	}
 
@@ -235,7 +224,7 @@ func (r *ChannelRepositoryImpl) CreatePoint(ctx context.Context, point *channel.
 		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
 	`
 
-	_, err := r.store.GetDB().ExecContext(ctx, query,
+	_, err := r.store.GetPool().Exec(ctx, query,
 		point.ID, point.ChannelID, point.Name, point.Description, point.Address,
 		point.DataType, point.Unit, point.Scale, point.Offset,
 		point.Enabled, point.CreatedAt, point.UpdatedAt,
@@ -253,13 +242,13 @@ func (r *ChannelRepositoryImpl) GetPoint(ctx context.Context, id string) (*chann
 	`
 
 	var point channel.Point
-	err := r.store.GetDB().QueryRowContext(ctx, query, id).Scan(
+	err := r.store.GetPool().QueryRow(ctx, query, id).Scan(
 		&point.ID, &point.ChannelID, &point.Name, &point.Description, &point.Address,
 		&point.DataType, &point.Unit, &point.Scale, &point.Offset,
 		&point.Enabled, &point.CreatedAt, &point.UpdatedAt,
 	)
 
-	if err == sql.ErrNoRows {
+	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, fmt.Errorf("point not found: %s", id)
 	}
 	if err != nil {
@@ -277,7 +266,7 @@ func (r *ChannelRepositoryImpl) GetPointsByChannel(ctx context.Context, channelI
 		FROM channel_points WHERE channel_id = $1 ORDER BY created_at
 	`
 
-	rows, err := r.store.GetDB().QueryContext(ctx, query, channelID)
+	rows, err := r.store.GetPool().Query(ctx, query, channelID)
 	if err != nil {
 		return nil, err
 	}
@@ -311,7 +300,7 @@ func (r *ChannelRepositoryImpl) UpdatePoint(ctx context.Context, point *channel.
 		WHERE id = $1
 	`
 
-	result, err := r.store.GetDB().ExecContext(ctx, query,
+	tag, err := r.store.GetPool().Exec(ctx, query,
 		point.ID, point.Name, point.Description, point.Address, point.DataType,
 		point.Unit, point.Scale, point.Offset, point.Enabled, point.UpdatedAt,
 	)
@@ -319,11 +308,7 @@ func (r *ChannelRepositoryImpl) UpdatePoint(ctx context.Context, point *channel.
 		return err
 	}
 
-	rows, err := result.RowsAffected()
-	if err != nil {
-		return err
-	}
-	if rows == 0 {
+	if tag.RowsAffected() == 0 {
 		return fmt.Errorf("point not found: %s", point.ID)
 	}
 
@@ -332,16 +317,12 @@ func (r *ChannelRepositoryImpl) UpdatePoint(ctx context.Context, point *channel.
 
 // DeletePoint 删除点位
 func (r *ChannelRepositoryImpl) DeletePoint(ctx context.Context, id string) error {
-	result, err := r.store.GetDB().ExecContext(ctx, "DELETE FROM channel_points WHERE id = $1", id)
+	tag, err := r.store.GetPool().Exec(ctx, "DELETE FROM channel_points WHERE id = $1", id)
 	if err != nil {
 		return err
 	}
 
-	rows, err := result.RowsAffected()
-	if err != nil {
-		return err
-	}
-	if rows == 0 {
+	if tag.RowsAffected() == 0 {
 		return fmt.Errorf("point not found: %s", id)
 	}
 
