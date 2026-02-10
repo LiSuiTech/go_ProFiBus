@@ -181,14 +181,15 @@ class ApiClient {
   // ==================== Health Check ====================
 
   /**
-   * Check API health
+   * Check API health（后端健康检查在根路径 /health，不在 /api/v1 下）
    */
   async health(): Promise<{
     status: string
     database: boolean
     time: string
   }> {
-    return this.client.get('/health')
+    const url = import.meta.env.DEV ? 'http://localhost:8080/health' : '/health'
+    return this.client.get(url, { baseURL: '' })
   }
 }
 

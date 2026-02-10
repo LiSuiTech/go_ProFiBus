@@ -99,6 +99,11 @@ func LoadConfig(filepath string) (*Config, error) {
 		return nil, fmt.Errorf("无法解析配置文件: %v", err)
 	}
 
+	// 未配置时使用默认值，避免验证失败
+	if config.Logging.Level == "" {
+		config.Logging.Level = "INFO"
+	}
+
 	// 验证配置
 	if err := validateConfig(&config); err != nil {
 		return nil, fmt.Errorf("配置验证失败: %v", err)

@@ -54,12 +54,7 @@ func (s *ControlService) ExecuteControlAction(ctx context.Context, action *contr
 		return fmt.Errorf("创建控制动作失败: %w", err)
 	}
 
-	// 如果需要确认，等待确认
-	if action.RequireConfirmation && action.ConfirmedAt == nil {
-		return nil // 等待确认
-	}
-
-	// 执行控制动作
+	// 需要确认的已在前面返回错误，此处直接执行
 	return s.executeAction(ctx, action, userID, userName, ipAddress, userAgent)
 }
 
@@ -200,11 +195,10 @@ func (s *ControlService) executeAction(ctx context.Context, action *controlDomai
 
 // checkPermission 检查权限
 func (s *ControlService) checkPermission(ctx context.Context, userID string, action *controlDomain.ControlAction) error {
-	// 获取用户权限
+	// 获取用户权限（查不到或出错时拒绝，fail-closed）
 	permission, err := s.repo.GetControlPermission(ctx, userID, action.ActionType)
 	if err != nil {
-		// 如果没有权限配置，默认允许（实际应该拒绝）
-		return nil // TODO: 根据安全策略决定
+		return fmt.Errorf("无法获取控制权限: %w", err)
 	}
 
 	if !permission.Enabled {

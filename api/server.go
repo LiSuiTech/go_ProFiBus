@@ -456,7 +456,9 @@ func (s *Server) registerRoutes() {
 				pipelines.GET("/:id/status", pipelineHandler.GetPipelineStatus)
 				pipelines.POST("/:id/start", pipelineHandler.StartPipeline)
 				pipelines.POST("/:id/stop", pipelineHandler.StopPipeline)
-				pipelines.GET("/:id/metrics", metricsHandler.GetPipelineMetrics)
+				if metricsHandler != nil {
+					pipelines.GET("/:id/metrics", metricsHandler.GetPipelineMetrics)
+				}
 			}
 		}
 

@@ -11,20 +11,21 @@ import (
 
 // Pipeline 数据处理管道
 type Pipeline struct {
-	name            string
-	source          interfaces.DataSource
-	processors      []interfaces.Processor
-	analyzers       []interfaces.Analyzer
-	sinks           []interfaces.DataSink
-	errorChan       chan error
-	stopChan        chan struct{}
-	wg              sync.WaitGroup
-	running         bool
-	mu              sync.RWMutex
-	statsMu         sync.RWMutex
+	name             string
+	source           interfaces.DataSource
+	processors       []interfaces.Processor
+	analyzers        []interfaces.Analyzer
+	sinks            []interfaces.DataSink
+	errorChan        chan error
+	stopChan         chan struct{}
+	wg               sync.WaitGroup
+	running          bool
+	mu               sync.RWMutex
+	statsMu          sync.RWMutex
+	stopOnce         sync.Once
 	samplesProcessed int64
-	errors          int64
-	lastSampleTime  time.Time
+	errors           int64
+	lastSampleTime   time.Time
 }
 
 // NewPipeline 创建新的数据管道
@@ -109,7 +110,7 @@ func (p *Pipeline) Start(ctx context.Context) error {
 	return nil
 }
 
-// Stop 停止管道
+// Stop 停止管道（可安全多次调用）。停止后 GetErrors() 返回的 channel 会被关闭。
 func (p *Pipeline) Stop() error {
 	p.mu.Lock()
 	if !p.running {
@@ -118,29 +119,29 @@ func (p *Pipeline) Stop() error {
 	}
 	p.mu.Unlock()
 
-	// 发送停止信号
-	close(p.stopChan)
+	var stopErr error
+	p.stopOnce.Do(func() {
+		close(p.stopChan)
+		p.wg.Wait()
+		// 关闭错误通道，使 MonitorErrors 等监听方能正常退出
+		close(p.errorChan)
 
-	// 停止数据源
-	if err := p.source.Stop(); err != nil {
-		return fmt.Errorf("failed to stop source: %w", err)
-	}
-
-	// 等待处理循环结束
-	p.wg.Wait()
-
-	// 关闭所有 sink
-	for _, sink := range p.sinks {
-		if err := sink.Close(); err != nil {
-			return fmt.Errorf("failed to close sink %s: %w", sink.GetName(), err)
+		if err := p.source.Stop(); err != nil {
+			stopErr = fmt.Errorf("failed to stop source: %w", err)
 		}
-	}
+		for _, sink := range p.sinks {
+			if err := sink.Close(); err != nil {
+				if stopErr == nil {
+					stopErr = fmt.Errorf("failed to close sink %s: %w", sink.GetName(), err)
+				}
+			}
+		}
 
-	p.mu.Lock()
-	p.running = false
-	p.mu.Unlock()
-
-	return nil
+		p.mu.Lock()
+		p.running = false
+		p.mu.Unlock()
+	})
+	return stopErr
 }
 
 // run 运行数据处理循环

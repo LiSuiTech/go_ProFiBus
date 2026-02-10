@@ -16,14 +16,15 @@ import (
 
 // OPCUA OPC-UA协议实现
 type OPCUA struct {
-	client   *opcua.Client
-	config   *OPCUAConfig
-	dataChan chan []byte
-	stopChan chan struct{}
+	client    *opcua.Client
+	config    *OPCUAConfig
+	dataChan  chan []byte
+	stopChan  chan struct{}
 	connected bool
-	mu       sync.RWMutex
-	ctx      context.Context
-	cancel   context.CancelFunc
+	mu        sync.RWMutex
+	closeOnce sync.Once
+	ctx       context.Context
+	cancel    context.CancelFunc
 }
 
 // OPCUAConfig OPC-UA配置
@@ -166,21 +167,20 @@ func (o *OPCUA) Read(buffer []byte) (int, error) {
 	}
 }
 
-// Close 关闭OPC-UA连接
+// Close 关闭OPC-UA连接（可安全多次调用）
 func (o *OPCUA) Close() error {
-	o.mu.Lock()
-	defer o.mu.Unlock()
-
-	close(o.stopChan)
-	o.cancel()
-
-	if o.client != nil {
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		o.client.Close(ctx)
-	}
-
-	o.connected = false
+	o.closeOnce.Do(func() {
+		o.mu.Lock()
+		close(o.stopChan)
+		o.cancel()
+		if o.client != nil {
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			o.client.Close(ctx)
+			cancel()
+		}
+		o.connected = false
+		o.mu.Unlock()
+	})
 	return nil
 }
 
