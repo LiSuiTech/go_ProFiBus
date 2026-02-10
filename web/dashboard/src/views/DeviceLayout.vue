@@ -116,7 +116,7 @@
                   :cy="device.location.y"
                   r="15"
                   :fill="getDeviceColor(device)"
-                  :stroke="#333"
+                  stroke="#333"
                   stroke-width="2"
                   class="draggable-device"
                   :data-device-id="device.id"

@@ -59,9 +59,10 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
+        # 版本信息可以通过外部环境变量传入；未指定时使用简单默认值，避免在这里使用 shell 表达式
         VERSION: ${VERSION:-dev}
-        BUILD_TIME: ${BUILD_TIME:-$(date -u +"%Y-%m-%dT%H:%M:%SZ")}
-        GIT_COMMIT: ${GIT_COMMIT:-$(git rev-parse --short HEAD)}
+        BUILD_TIME: ${BUILD_TIME:-unknown}
+        GIT_COMMIT: ${GIT_COMMIT:-dev}
     container_name: profibus-app
     restart: unless-stopped
     depends_on:

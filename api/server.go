@@ -294,21 +294,21 @@ func (s *Server) registerRoutes() {
 			devices.DELETE("/:id/channels/:channel_id", deviceHandler.RemoveDeviceChannel)
 			
 			// 设备数据字段路由
-			devices.POST("/:device_id/data-fields", deviceDataHandler.CreateDataField)
-			devices.GET("/:device_id/data-fields", deviceDataHandler.ListDataFields)
+			devices.POST("/:id/data-fields", deviceDataHandler.CreateDataField)
+			devices.GET("/:id/data-fields", deviceDataHandler.ListDataFields)
 			
 			// 设备数据源路由
-			devices.POST("/:device_id/data-sources", deviceDataHandler.CreateDataSource)
-			devices.GET("/:device_id/data-sources", deviceDataHandler.ListDataSources)
+			devices.POST("/:id/data-sources", deviceDataHandler.CreateDataSource)
+			devices.GET("/:id/data-sources", deviceDataHandler.ListDataSources)
 			
 			// 设备数据提交和查询路由
-			devices.POST("/:device_id/data", deviceDataHandler.SubmitDeviceData)
-			devices.GET("/:device_id/fused-data", deviceDataHandler.GetFusedData)
-			devices.GET("/:device_id/fused-data/latest", deviceDataHandler.GetLatestFusedData)
+			devices.POST("/:id/data", deviceDataHandler.SubmitDeviceData)
+			devices.GET("/:id/fused-data", deviceDataHandler.GetFusedData)
+			devices.GET("/:id/fused-data/latest", deviceDataHandler.GetLatestFusedData)
 			
 			// 设备融合配置路由
-			devices.GET("/:device_id/fusion-config", deviceDataHandler.GetFusionConfig)
-			devices.PUT("/:device_id/fusion-config", deviceDataHandler.UpdateFusionConfig)
+			devices.GET("/:id/fusion-config", deviceDataHandler.GetFusionConfig)
+			devices.PUT("/:id/fusion-config", deviceDataHandler.UpdateFusionConfig)
 		}
 
 		// 告警管理路由

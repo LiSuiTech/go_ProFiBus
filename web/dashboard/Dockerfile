@@ -13,8 +13,8 @@ WORKDIR /app
 # Copy package files
 COPY package.json package-lock.json* ./
 
-# Install dependencies
-RUN npm ci --only=production --ignore-scripts
+# 安装全部依赖（包含开发依赖，用于构建）
+RUN npm ci
 
 # Copy source code
 COPY . .

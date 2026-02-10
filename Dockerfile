@@ -40,9 +40,10 @@ RUN mkdir -p /build/configs && cp /build/config.yaml /build/configs/ 2>/dev/null
 # Build the application
 # CGO_ENABLED=0: Build static binary
 # -ldflags: Strip debug info and set version
+# VERSION/BUILD_TIME/GIT_COMMIT 可以通过构建参数传入；未传入时使用简单默认值
 ARG VERSION=dev
-ARG BUILD_TIME
-ARG GIT_COMMIT
+ARG BUILD_TIME=unknown
+ARG GIT_COMMIT=dev
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
     -ldflags="-w -s \
     -X main.Version=${VERSION} \

@@ -79,9 +79,9 @@
                   :key="protocol.type"
                   :span="6"
                 >
-                  <el-card class="protocol-card" shadow="hover">
+                    <el-card class="protocol-card" shadow="hover">
                     <div class="protocol-icon">
-                      <el-icon :size="32"><CloudUpload /></el-icon>
+                      <el-icon :size="32"><Share /></el-icon>
                     </div>
                     <h3>{{ protocol.name }}</h3>
                     <p class="description">{{ protocol.description }}</p>
@@ -285,7 +285,7 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, Refresh, Connection, Share, CloudUpload } from '@element-plus/icons-vue'
+import { Plus, Refresh, Connection, Share } from '@element-plus/icons-vue'
 import axios from 'axios'
 
 // 状态

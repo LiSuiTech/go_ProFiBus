@@ -27,9 +27,9 @@ func NewDeviceDataHandler(dataRepo interfaces.DeviceDataRepository, fusionServic
 }
 
 // CreateDataField 创建数据字段
-// POST /api/v1/devices/:device_id/data-fields
+// POST /api/v1/devices/:id/data-fields
 func (h *DeviceDataHandler) CreateDataField(c *gin.Context) {
-	deviceID := c.Param("device_id")
+	deviceID := c.Param("id")
 
 	var req struct {
 		FieldName    string   `json:"field_name" binding:"required"`
@@ -75,9 +75,9 @@ func (h *DeviceDataHandler) CreateDataField(c *gin.Context) {
 }
 
 // ListDataFields 列出数据字段
-// GET /api/v1/devices/:device_id/data-fields
+// GET /api/v1/devices/:id/data-fields
 func (h *DeviceDataHandler) ListDataFields(c *gin.Context) {
-	deviceID := c.Param("device_id")
+	deviceID := c.Param("id")
 
 	fields, err := h.dataRepo.GetDataFieldsByDevice(c.Request.Context(), deviceID)
 	if err != nil {
@@ -92,9 +92,9 @@ func (h *DeviceDataHandler) ListDataFields(c *gin.Context) {
 }
 
 // CreateDataSource 创建数据源
-// POST /api/v1/devices/:device_id/data-sources
+// POST /api/v1/devices/:id/data-sources
 func (h *DeviceDataHandler) CreateDataSource(c *gin.Context) {
-	deviceID := c.Param("device_id")
+	deviceID := c.Param("id")
 
 	var req struct {
 		SourceName   string            `json:"source_name" binding:"required"`
@@ -140,9 +140,9 @@ func (h *DeviceDataHandler) CreateDataSource(c *gin.Context) {
 }
 
 // ListDataSources 列出数据源
-// GET /api/v1/devices/:device_id/data-sources
+// GET /api/v1/devices/:id/data-sources
 func (h *DeviceDataHandler) ListDataSources(c *gin.Context) {
-	deviceID := c.Param("device_id")
+	deviceID := c.Param("id")
 
 	sources, err := h.dataRepo.GetDataSourcesByDevice(c.Request.Context(), deviceID)
 	if err != nil {
@@ -157,9 +157,9 @@ func (h *DeviceDataHandler) ListDataSources(c *gin.Context) {
 }
 
 // SubmitDeviceData 提交设备数据
-// POST /api/v1/devices/:device_id/data
+// POST /api/v1/devices/:id/data
 func (h *DeviceDataHandler) SubmitDeviceData(c *gin.Context) {
-	deviceID := c.Param("device_id")
+	deviceID := c.Param("id")
 
 	var req struct {
 		SourceID string                 `json:"source_id" binding:"required"`
@@ -190,9 +190,9 @@ func (h *DeviceDataHandler) SubmitDeviceData(c *gin.Context) {
 }
 
 // GetFusedData 获取融合数据
-// GET /api/v1/devices/:device_id/fused-data
+// GET /api/v1/devices/:id/fused-data
 func (h *DeviceDataHandler) GetFusedData(c *gin.Context) {
-	deviceID := c.Param("device_id")
+	deviceID := c.Param("id")
 
 	startStr := c.DefaultQuery("start", "")
 	endStr := c.DefaultQuery("end", "")
@@ -241,9 +241,9 @@ func (h *DeviceDataHandler) GetFusedData(c *gin.Context) {
 }
 
 // GetLatestFusedData 获取最新融合数据
-// GET /api/v1/devices/:device_id/fused-data/latest
+// GET /api/v1/devices/:id/fused-data/latest
 func (h *DeviceDataHandler) GetLatestFusedData(c *gin.Context) {
-	deviceID := c.Param("device_id")
+	deviceID := c.Param("id")
 
 	data, err := h.fusionService.GetLatestFusedData(c.Request.Context(), deviceID)
 	if err != nil {
@@ -255,9 +255,9 @@ func (h *DeviceDataHandler) GetLatestFusedData(c *gin.Context) {
 }
 
 // UpdateFusionConfig 更新融合配置
-// PUT /api/v1/devices/:device_id/fusion-config
+// PUT /api/v1/devices/:id/fusion-config
 func (h *DeviceDataHandler) UpdateFusionConfig(c *gin.Context) {
-	deviceID := c.Param("device_id")
+	deviceID := c.Param("id")
 
 	config, err := h.dataRepo.GetFusionConfigByDevice(c.Request.Context(), deviceID)
 	if err != nil {
@@ -318,9 +318,9 @@ func (h *DeviceDataHandler) UpdateFusionConfig(c *gin.Context) {
 }
 
 // GetFusionConfig 获取融合配置
-// GET /api/v1/devices/:device_id/fusion-config
+// GET /api/v1/devices/:id/fusion-config
 func (h *DeviceDataHandler) GetFusionConfig(c *gin.Context) {
-	deviceID := c.Param("device_id")
+	deviceID := c.Param("id")
 
 	config, err := h.dataRepo.GetFusionConfigByDevice(c.Request.Context(), deviceID)
 	if err != nil {

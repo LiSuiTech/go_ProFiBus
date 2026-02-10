@@ -4,7 +4,8 @@
 
 -- 追踪事件表
 CREATE TABLE IF NOT EXISTS trace_events (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    -- 注意：TimescaleDB hypertable 的唯一约束/主键必须包含分区列（本表为 timestamp）
+    id UUID NOT NULL DEFAULT gen_random_uuid(),
     pipeline_id VARCHAR(255) NOT NULL,
     sample_id VARCHAR(255) NOT NULL,
     component_type VARCHAR(50) NOT NULL,
@@ -17,7 +18,8 @@ CREATE TABLE IF NOT EXISTS trace_events (
     error_message TEXT,
     metadata JSONB,
     data_snapshot JSONB,
-    created_at TIMESTAMPTZ DEFAULT NOW()
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    PRIMARY KEY (id, timestamp)
 );
 
 -- 索引优化查询性能
