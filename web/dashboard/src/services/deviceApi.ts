@@ -3,21 +3,36 @@ import axios from 'axios'
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api/v1'
 
 export interface Device {
-  id: string
-  name: string
+  ID?: string
+  id?: string
+  Name?: string
+  name?: string
+  Description?: string
   description?: string
-  type: 'PLC' | 'Sensor' | 'Instrument' | 'SmartDevice'
-  status: 'online' | 'offline' | 'fault' | 'maintenance'
-  health_score: number
-  location: {
+  Type?: 'PLC' | 'Sensor' | 'Instrument' | 'SmartDevice'
+  type?: 'PLC' | 'Sensor' | 'Instrument' | 'SmartDevice'
+  Status?: 'online' | 'offline' | 'fault' | 'maintenance'
+  status?: 'online' | 'offline' | 'fault' | 'maintenance'
+  HealthScore?: number
+  health_score?: number
+  Location?: {
+    X: number
+    Y: number
+    Z?: number
+  }
+  location?: {
     x: number
     y: number
     z?: number
   }
+  Area?: string
   area?: string
+  Metadata?: Record<string, any>
   metadata?: Record<string, any>
-  created_at: string
-  updated_at: string
+  CreatedAt?: string
+  created_at?: string
+  UpdatedAt?: string
+  updated_at?: string
 }
 
 export interface DeviceFilters {

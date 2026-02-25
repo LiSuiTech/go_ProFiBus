@@ -37,28 +37,40 @@
 
       <!-- 设备列表 -->
       <el-table :data="devices" v-loading="loading" stripe>
-        <el-table-column prop="name" label="设备名称" width="150" />
-        <el-table-column prop="type" label="设备类型" width="120">
+        <el-table-column label="设备名称" width="150">
           <template #default="{ row }">
-            <el-tag :type="getTypeTagType(row.type)">{{ getTypeLabel(row.type) }}</el-tag>
+            {{ row.Name || row.name }}
           </template>
         </el-table-column>
-        <el-table-column prop="status" label="状态" width="100">
+        <el-table-column label="设备类型" width="120">
           <template #default="{ row }">
-            <el-tag :type="getStatusTagType(row.status)">{{ getStatusLabel(row.status) }}</el-tag>
+            <el-tag :type="getTypeTagType(row.Type || row.type)">{{ getTypeLabel(row.Type || row.type) }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="health_score" label="健康度" width="100">
+        <el-table-column label="状态" width="100">
+          <template #default="{ row }">
+            <el-tag :type="getStatusTagType(row.Status || row.status)">{{ getStatusLabel(row.Status || row.status) }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="健康度" width="100">
           <template #default="{ row }">
             <el-progress
-              :percentage="row.health_score"
-              :color="getHealthColor(row.health_score)"
+              :percentage="row.HealthScore || row.health_score"
+              :color="getHealthColor(row.HealthScore || row.health_score)"
               :stroke-width="8"
             />
           </template>
         </el-table-column>
-        <el-table-column prop="area" label="区域" width="120" />
-        <el-table-column prop="description" label="描述" show-overflow-tooltip />
+        <el-table-column label="区域" width="120">
+          <template #default="{ row }">
+            {{ row.Area || row.area }}
+          </template>
+        </el-table-column>
+        <el-table-column label="描述" show-overflow-tooltip>
+          <template #default="{ row }">
+            {{ row.Description || row.description }}
+          </template>
+        </el-table-column>
         <el-table-column label="操作" width="200" fixed="right">
           <template #default="{ row }">
             <el-button link type="primary" @click="handleView(row)">查看</el-button>
@@ -199,12 +211,12 @@ const handleCreate = () => {
 
 const handleEdit = async (device: Device) => {
   dialogTitle.value = '编辑设备'
-  editingId.value = device.id
-  form.name = device.name
-  form.type = device.type
-  form.description = device.description || ''
-  form.location = { ...device.location }
-  form.area = device.area || ''
+  editingId.value = device.ID || device.id || ''
+  form.name = device.Name || device.name || ''
+  form.type = device.Type || device.type || ''
+  form.description = device.Description || device.description || ''
+  form.location = device.Location ? { x: device.Location.X, y: device.Location.Y, z: device.Location.Z || 0 } : (device.location || { x: 0, y: 0, z: 0 })
+  form.area = device.Area || device.area || ''
   dialogVisible.value = true
 }
 
@@ -215,12 +227,14 @@ const handleView = async (device: Device) => {
 
 const handleDelete = async (device: Device) => {
   try {
-    await ElMessageBox.confirm(`确定要删除设备 "${device.name}" 吗？`, '提示', {
+    const deviceName = device.Name || device.name || ''
+    const deviceId = device.ID || device.id || ''
+    await ElMessageBox.confirm(`确定要删除设备 "${deviceName}" 吗？`, '提示', {
       confirmButtonText: '确定',
       cancelButtonText: '取消',
       type: 'warning',
     })
-    await deviceApi.deleteDevice(device.id)
+    await deviceApi.deleteDevice(deviceId)
     ElMessage.success('删除成功')
     loadDevices()
   } catch (error: any) {
