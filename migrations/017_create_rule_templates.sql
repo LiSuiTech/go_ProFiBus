@@ -50,8 +50,8 @@ INSERT INTO rule_templates (id, name, description, category, rule_type, tags, ic
         "type": "threshold",
         "field": "${field_name}",
         "operator": "${operator}",
-        "value": ${threshold},
-        "duration": ${duration}
+        "value": "${threshold}",
+        "duration": "${duration}"
     }',
     '{
         "field_name": {"type": "string", "description": "监控字段名称", "required": true},
@@ -78,7 +78,7 @@ INSERT INTO rule_templates (id, name, description, category, rule_type, tags, ic
         "type": "anomaly",
         "field": "${field_name}",
         "method": "${method}",
-        "threshold": ${threshold}
+        "threshold": "${threshold}"
     }',
     '{
         "field_name": {"type": "string", "description": "监控字段名称", "required": true},
@@ -102,9 +102,9 @@ INSERT INTO rule_templates (id, name, description, category, rule_type, tags, ic
     '{
         "type": "trend",
         "field": "${field_name}",
-        "window_size": ${window_size},
+        "window_size": "${window_size}",
         "trend_type": "${trend_type}",
-        "threshold": ${threshold}
+        "threshold": "${threshold}"
     }',
     '{
         "field_name": {"type": "string", "description": "监控字段名称", "required": true},
@@ -131,8 +131,8 @@ INSERT INTO rule_templates (id, name, description, category, rule_type, tags, ic
         "type": "composite",
         "logic": "AND",
         "conditions": [
-            {"field": "${field1}", "operator": "${operator1}", "value": ${value1}},
-            {"field": "${field2}", "operator": "${operator2}", "value": ${value2}}
+            {"field": "${field1}", "operator": "${operator1}", "value": "${value1}"},
+            {"field": "${field2}", "operator": "${operator2}", "value": "${value2}"}
         ]
     }',
     '{
@@ -160,8 +160,8 @@ INSERT INTO rule_templates (id, name, description, category, rule_type, tags, ic
     '{
         "type": "rate_of_change",
         "field": "${field_name}",
-        "time_window": ${time_window},
-        "threshold": ${threshold}
+        "time_window": "${time_window}",
+        "threshold": "${threshold}"
     }',
     '{
         "field_name": {"type": "string", "description": "监控字段名称", "required": true},

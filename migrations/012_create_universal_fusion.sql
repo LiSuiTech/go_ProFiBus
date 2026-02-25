@@ -68,9 +68,9 @@ CREATE TABLE IF NOT EXISTS fusion_source_data_cache (
     data JSONB NOT NULL, -- 数据内容
     quality DOUBLE PRECISION DEFAULT 1.0, -- 数据质量
     metadata JSONB NOT NULL DEFAULT '{}', -- 元数据
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    INDEX idx_fusion_cache_source_time (source_id, timestamp DESC)
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+CREATE INDEX IF NOT EXISTS idx_fusion_cache_source_time ON fusion_source_data_cache (source_id, timestamp DESC);
 
 -- 创建索引
 CREATE INDEX IF NOT EXISTS idx_fusion_data_sources_type ON fusion_data_sources(source_type);
